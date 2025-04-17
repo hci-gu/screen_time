@@ -4,14 +4,23 @@ import 'package:screen_time/widgets/date_button.dart';
 import 'package:screen_time/widgets/date_display.dart';
 import '../providers/usage_provider.dart';
 
+bool isToday(String dateString) {
+  final date = DateTime.parse(dateString);
+  final now = DateTime.now();
+  return date.year == now.year &&
+      date.month == now.month &&
+      date.day == now.day;
+}
+
 class DateSelector extends ConsumerWidget {
-  const DateSelector({Key? key}) : super(key: key);
+  const DateSelector({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usageState = ref.watch(usageProvider);
     final usageNotifier = ref.read(usageProvider.notifier);
     final totalMins =
         usageState.usageData.values.fold(0, (a, b) => a + b) / 60.0;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -28,13 +37,15 @@ class DateSelector extends ConsumerWidget {
         DateDisplay(date: usageState.date, totalMins: totalMins),
         DateButton(
           icon: Icons.chevron_right,
-          onPressed: () {
-            final nextDate = DateTime.parse(usageState.date)
-                .add(const Duration(days: 1));
-            final newDate =
-                "${nextDate.year}-${nextDate.month.toString().padLeft(2, '0')}-${nextDate.day.toString().padLeft(2, '0')}";
-            usageNotifier.updateDate(newDate);
-          },
+          onPressed: isToday(usageState.date)
+              ? null
+              : () {
+                  final nextDate = DateTime.parse(usageState.date)
+                      .add(const Duration(days: 1));
+                  final newDate =
+                      "${nextDate.year}-${nextDate.month.toString().padLeft(2, '0')}-${nextDate.day.toString().padLeft(2, '0')}";
+                  usageNotifier.updateDate(newDate);
+                },
         ),
       ],
     );

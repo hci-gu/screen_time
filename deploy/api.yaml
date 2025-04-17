@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: screentime-api
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: screentime-api
+    template:
+        metadata:
+            labels:
+                app: screentime-api
+        spec:
+            volumes:
+                - name: screentime-api-persistent-storage
+                  persistentVolumeClaim:
+                      claimName: screentime-pv-claim
+            containers:
+                - name: screentime-api
+                  image: 'registry.k8s.gu.se/appademin/screentime-api:0.0.2'
+                  imagePullPolicy: Always
+                  ports:
+                      - containerPort: 8080
+                        name: web
+                        protocol: TCP
+                  volumeMounts:
+                      - mountPath: /pb/pb_data
+                        name: screentime-api-persistent-storage
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#     name: screentime-api-service
+# spec:
+#     selector:
+#         app: screentime-api
+#     ports:
+#         - protocol: TCP
+#           port: 8080
+# ---
+# kind: Route
+# apiVersion: route.openshift.io/v1
+# metadata:
+#     name: screentime-api
+#     annotations:
+#         kubernetes.io/tls-acme: 'true'
+# spec:
+#     host: screentime-api.prod.appadem.in
+#     to:
+#         kind: Service
+#         name: screentime-api-service
+#         weight: 100
+#     port:
+#         targetPort: 8080
+#     tls:
+#         termination: edge
+#         insecureEdgeTerminationPolicy: Redirect
+#     wildcardPolicy: None

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/usage_provider.dart';
 
 class GrantPermissionView extends ConsumerWidget {
-  const GrantPermissionView({Key? key}) : super(key: key);
+  const GrantPermissionView({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usageNotifier = ref.read(usageProvider.notifier);

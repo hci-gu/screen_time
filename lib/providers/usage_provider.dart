@@ -1,5 +1,11 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
+import 'package:screen_time/api.dart' as api;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'dart:io';
 
 final usageProvider =
@@ -31,6 +37,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
   final MethodChannel _platform =
       const MethodChannel("com.example.screen_time/usage");
   bool get isAndroid => Platform.isAndroid;
+  DateTime lastUpdate = DateTime(1900, 1, 1);
 
   UsageNotifier()
       : super(UsageState(
@@ -39,6 +46,25 @@ class UsageNotifier extends StateNotifier<UsageState> {
           hasPermission: !Platform.isAndroid, // auto-true if non-android
         )) {
     checkUsageStatsPermission();
+    _loadLastUpdate();
+  }
+
+  Future<void> _loadLastUpdate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString("lastUpdate");
+    if (stored != null) {
+      try {
+        lastUpdate = DateTime.parse(stored);
+      } catch (_) {
+        lastUpdate = DateTime(1900, 1, 1);
+      }
+    }
+  }
+
+  Future<void> _saveLastUpdate() async {
+    lastUpdate = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("lastUpdate", lastUpdate.toIso8601String());
   }
 
   static String _currentDate() {
@@ -113,8 +139,8 @@ class UsageNotifier extends StateNotifier<UsageState> {
       final Map<dynamic, dynamic> result =
           await _platform.invokeMethod("getHourlyUsage", {"date": state.date});
       state = state.copyWith(
-          usageData: result.map((key, value) =>
-              MapEntry(key as String, value as int)));
+          usageData: result
+              .map((key, value) => MapEntry(key as String, value as int)));
     } on PlatformException catch (e) {
       print("getUsageStats error: ${e.message}");
     }
@@ -125,11 +151,28 @@ class UsageNotifier extends StateNotifier<UsageState> {
     getUsageStats();
   }
 
-  Future<void> uploadData() async {
-    try {
-      await _platform.invokeMethod("postScreenTime", {"date": state.date});
-    } on PlatformException catch (e) {
-      print("uploadData error: ${e.message}");
+  Future<bool> uploadData(String userId) async {
+    if (!isAndroid) {
+      bool success = await api.uploadData(userId, {'screenTimeEntries': []});
+      return success;
     }
+    // has there been more than one hour since last update?
+    // if (lastUpdate.isAfter(DateTime.now().subtract(const Duration(hours: 1)))) {
+    //   return true;
+    // }
+
+    try {
+      final jsonString =
+          await _platform.invokeMethod("postScreenTime", {"date": state.date});
+      final jsonData = jsonDecode(jsonString);
+      bool success = await api.uploadData(userId, jsonData);
+
+      if (success) {
+        _saveLastUpdate();
+        return true;
+      }
+    } on PlatformException catch (_) {}
+
+    return false;
   }
 }
