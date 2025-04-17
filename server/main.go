@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -29,7 +30,6 @@ func createJobRecord(app *pocketbase.PocketBase, userId string) error {
 	record := core.NewRecord(collection)
 	record.Set("user", userId)
 	app.Save(record)
-	print("SAVED")
 	return nil
 }
 
@@ -56,12 +56,44 @@ func main() {
 			}
 
 			for _, entry := range data.ScreenTimeEntries {
-				record := core.NewRecord(collection)
-				record.Set("user", id)
-				record.Set("hour", entry.Hour)
-				record.Set("seconds", entry.Seconds)
-				log.Printf("Saving record: %s, %d", entry.Hour, entry.Seconds)
-				app.Save(record)
+				// Build a filter to check if a record exists with the same user and hour
+				filter := fmt.Sprintf("user = '%s' && hour = '%s'", id, entry.Hour)
+				existingRecords, err := app.FindRecordsByFilter("screentime", filter, "", 5, 0)
+				if err != nil {
+					log.Printf("Error querying existing records: %v", err)
+					continue // skip this entry on error
+				}
+
+				if len(existingRecords) > 0 {
+					// There is an existing record, check if we should update
+					existing := existingRecords[0]
+					existingSeconds := existing.GetInt("seconds")
+
+					if entry.Seconds > existingSeconds {
+						existing.Set("seconds", entry.Seconds)
+						err := app.Save(existing)
+						if err != nil {
+							log.Printf("Error updating record: %v", err)
+						} else {
+							log.Printf("Updated record: %s with %d seconds", entry.Hour, entry.Seconds)
+						}
+					} else {
+						log.Printf("Skipping record for %s: existing seconds %d >= new seconds %d", entry.Hour, existingSeconds, entry.Seconds)
+					}
+				} else {
+					// No existing record, create a new one
+					record := core.NewRecord(collection)
+					record.Set("user", id)
+					record.Set("hour", entry.Hour)
+					record.Set("seconds", entry.Seconds)
+
+					err := app.Save(record)
+					if err != nil {
+						log.Printf("Error saving new record: %v", err)
+					} else {
+						log.Printf("Saved new record: %s with %d seconds", entry.Hour, entry.Seconds)
+					}
+				}
 			}
 
 			return e.JSON(http.StatusOK, map[string]bool{"success": true})
