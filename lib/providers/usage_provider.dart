@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:screen_time/api.dart' as api;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screentime/screentime.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:io';
@@ -34,8 +35,6 @@ class UsageState {
 }
 
 class UsageNotifier extends StateNotifier<UsageState> {
-  final MethodChannel _platform =
-      const MethodChannel("com.example.screen_time/usage");
   bool get isAndroid => Platform.isAndroid;
   DateTime lastUpdate = DateTime(1900, 1, 1);
 
@@ -80,8 +79,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
       return;
     }
     try {
-      final bool permitted =
-          await _platform.invokeMethod("hasUsageStatsPermission");
+      final bool permitted = await Screentime().hasPermission();
       state = state.copyWith(hasPermission: permitted);
       if (permitted) {
         getUsageStats();
@@ -93,9 +91,8 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
   Future<void> requestUsageStatsPermission() async {
     try {
-      await _platform.invokeMethod("requestUsageStatsPermission");
-      final bool permitted =
-          await _platform.invokeMethod("hasUsageStatsPermission");
+      await Screentime().requestUsageStatsPermission();
+      final bool permitted = await Screentime().hasPermission();
       state = state.copyWith(hasPermission: permitted);
       if (permitted) {
         getUsageStats();
@@ -136,11 +133,9 @@ class UsageNotifier extends StateNotifier<UsageState> {
       return;
     }
     try {
-      final Map<dynamic, dynamic> result =
-          await _platform.invokeMethod("getHourlyUsage", {"date": state.date});
-      state = state.copyWith(
-          usageData: result
-              .map((key, value) => MapEntry(key as String, value as int)));
+      final Map<String, int> result =
+          await Screentime().getUsageStats(state.date);
+      state = state.copyWith(usageData: result);
     } on PlatformException catch (e) {
       print("getUsageStats error: ${e.message}");
     }
@@ -156,16 +151,29 @@ class UsageNotifier extends StateNotifier<UsageState> {
       bool success = await api.uploadData(userId, {'screenTimeEntries': []});
       return success;
     }
-    // has there been more than one hour since last update?
-    // if (lastUpdate.isAfter(DateTime.now().subtract(const Duration(hours: 1)))) {
-    //   return true;
-    // }
 
     try {
-      final jsonString =
-          await _platform.invokeMethod("postScreenTime", {"date": state.date});
-      final jsonData = jsonDecode(jsonString);
-      bool success = await api.uploadData(userId, jsonData);
+      print("uploadData.before Screentime.getUsageStats");
+      final Map<String, int> entries = await Screentime().getUsageStats(
+        state.date,
+      );
+      print("uploadData.after Screentime.getUsageStats: $entries");
+      // convert to list of maps
+      final List<Map<String, dynamic>> entriesList = [];
+      entries.forEach((key, value) {
+        entriesList.add({
+          'hour': key,
+          'seconds': value,
+        });
+      });
+
+      final Map<String, dynamic> result = {
+        'screenTimeEntries': entriesList,
+      };
+
+      print("before api.uploadData: $result");
+
+      bool success = await api.uploadData(userId, result);
 
       if (success) {
         _saveLastUpdate();

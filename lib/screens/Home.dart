@@ -1,17 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:screen_time/providers/usage_provider.dart';
+import 'package:screen_time/services/foreground_service.dart';
 import 'package:screen_time/widgets/date_selector.dart';
 import 'package:screen_time/widgets/grant_permission_view.dart';
 import 'package:screen_time/widgets/upload_button.dart';
 import 'package:screen_time/widgets/usage_graph.dart';
 import 'package:screen_time/widgets/usage_list.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
+
+  void _startForeGroundService() async {
+    try {
+      if (await ForegroundService.instance.isRunningService) {
+        return;
+      }
+
+      ForegroundService.instance.start();
+    } catch (e) {
+      print("Error starting foreground service: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    useEffect(() {
+      _startForeGroundService();
+      return () {};
+    }, []);
+
     final usageState = ref.watch(usageProvider);
     return Scaffold(
       appBar: AppBar(
