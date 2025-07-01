@@ -28,6 +28,7 @@ dependencies:
   screentime:
     git:
       url: https://github.com/hci-gu/flutter-screentime.git
+  pocketbase: ^0.11.0
 
 dev_dependencies:
   flutter_test:

@@ -41,10 +41,6 @@ class MyApp extends HookConsumerWidget {
           centerTitle: true,
           elevation: 2,
         ),
-        cardTheme: const CardTheme(
-          elevation: 2,
-          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        ),
       ),
       routerConfig: router,
     );

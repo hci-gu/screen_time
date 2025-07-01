@@ -17,7 +17,6 @@ class RouterNotifier extends ChangeNotifier {
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
     final userId = _ref.read(userIdProvider);
-    print("User ID: $userId");
     if (userId != null) {
       return '/';
     }
