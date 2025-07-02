@@ -30,6 +30,7 @@ class MyApp extends HookConsumerWidget {
     );
 
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'Screen Time Tracker',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -41,7 +42,7 @@ class MyApp extends HookConsumerWidget {
           centerTitle: true,
           elevation: 2,
         ),
-        cardTheme: const CardTheme(
+        cardTheme: const CardThemeData(
           elevation: 2,
           margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
