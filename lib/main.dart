@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'dart:io';
 import 'package:screen_time/router.dart';
 import 'package:screen_time/services/foreground_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'providers/usage_provider.dart';
+import 'providers/user_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,17 +18,19 @@ class MyApp extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+
+    final userId = ref.watch(userIdProvider);
     final router = ref.watch(
       routerProvider(
         RouterProps(
-          loggedIn: false,
+          loggedIn: userId != null,
         ),
       ),
     );
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Screen Time Tracker',
+      title: 'Skärmtidstracker',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,

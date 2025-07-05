@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:screen_time/providers/usage_provider.dart';
+import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/services/foreground_service.dart';
 import 'package:screen_time/widgets/date_selector.dart';
 import 'package:screen_time/widgets/grant_permission_view.dart';
@@ -29,7 +30,11 @@ class UsagePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     useEffect(() {
       _startForeGroundService();
-      return () {};
+      final observer = _UsageLifecycleObserver(ref);
+      WidgetsBinding.instance.addObserver(observer);
+      return () {
+        WidgetsBinding.instance.removeObserver(observer);
+      };
     }, []);
 
     final usageState = ref.watch(usageProvider);
@@ -55,5 +60,18 @@ class UsagePage extends HookConsumerWidget {
       floatingActionButton:
           !usageState.hasPermission ? null : const UploadButton(),
     );
+  }
+}
+
+class _UsageLifecycleObserver extends WidgetsBindingObserver {
+  final WidgetRef ref;
+  _UsageLifecycleObserver(this.ref);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(usageProvider);
+      ref.invalidate(userIdProvider);
+    }
   }
 }

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/screens/Home.dart';
 import 'package:screen_time/screens/Login.dart';
+import 'package:screen_time/screens/Usage.dart';
+import 'package:screen_time/providers/usage_provider.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -17,9 +19,19 @@ class RouterNotifier extends ChangeNotifier {
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
     final userId = _ref.read(userIdProvider);
-    print("User ID: $userId");
-    if (userId != null) {
-      return '/';
+    final usageState = _ref.read(usageProvider);
+    if (userId == null) {
+      return '/login';
+    }
+    if (!usageState.hasPermission) {
+      if (state.uri.toString() != '/usage') {
+        return '/usage';
+      }
+    }
+    if (state.uri.toString() == '/login' || state.uri.toString() == '/usage') {
+      if (usageState.hasPermission) {
+        return '/';
+      }
     }
     return null;
   }
@@ -42,14 +54,18 @@ final routerProvider = Provider.family<GoRouter, RouterProps>((ref, props) {
         builder: (BuildContext context, GoRouterState state) {
           return const HomePage();
         },
-        routes: <RouteBase>[
-          GoRoute(
-            path: 'login',
-            builder: (BuildContext context, GoRouterState state) {
-              return const LoginPage();
-            },
-          ),
-        ],
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (BuildContext context, GoRouterState state) {
+          return const LoginPage();
+        },
+      ),
+      GoRoute(
+        path: '/usage',
+        builder: (BuildContext context, GoRouterState state) {
+          return const UsagePage();
+        },
       ),
     ],
     refreshListenable: routerNotifier,
