@@ -16,20 +16,24 @@ class UsageState {
   final String date;
   final Map<String, int> usageData;
   final bool hasPermission;
+  final bool isLoading;
   const UsageState({
     required this.date,
     required this.usageData,
     required this.hasPermission,
+    this.isLoading = false,
   });
   UsageState copyWith({
     String? date,
     Map<String, int>? usageData,
     bool? hasPermission,
+    bool? isLoading,
   }) {
     return UsageState(
       date: date ?? this.date,
       usageData: usageData ?? this.usageData,
       hasPermission: hasPermission ?? this.hasPermission,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -43,6 +47,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
           date: _currentDate(),
           usageData: {},
           hasPermission: !Platform.isAndroid, // auto-true if non-android
+          isLoading: Platform.isAndroid, // loading only on Android
         )) {
     checkUsageStatsPermission();
     _loadLastUpdate();
@@ -74,18 +79,19 @@ class UsageNotifier extends StateNotifier<UsageState> {
   Future<void> checkUsageStatsPermission() async {
     if (!isAndroid) {
       // on non-android, assume permission granted and load mock data
-      state = state.copyWith(hasPermission: true);
+      state = state.copyWith(hasPermission: true, isLoading: false);
       getUsageStats();
       return;
     }
     try {
       final bool permitted = await Screentime().hasPermission();
-      state = state.copyWith(hasPermission: permitted);
+      state = state.copyWith(hasPermission: permitted, isLoading: false);
       if (permitted) {
         getUsageStats();
       }
     } on PlatformException catch (e) {
-      print("checkUsageStatsPermission error: ${e.message}");
+      print("checkUsageStatsPermission error: [31m${e.message}[0m");
+      state = state.copyWith(isLoading: false);
     }
   }
 

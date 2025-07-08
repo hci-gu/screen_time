@@ -20,6 +20,9 @@ class RouterNotifier extends ChangeNotifier {
   String? _redirectLogic(BuildContext context, GoRouterState state) {
     final userId = _ref.read(userIdProvider);
     final usageState = _ref.read(usageProvider);
+    if (usageState.isLoading) {
+      return null;
+    }
     if (userId == null) {
       return '/login';
     }
