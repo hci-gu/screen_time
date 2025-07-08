@@ -189,4 +189,42 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
     return false;
   }
+
+  Future<bool> uploadLast7Days(String userId) async {
+    if (!isAndroid) {
+      bool success = await api.uploadData(userId, {'screenTimeEntries': []});
+      return success;
+    }
+
+    try {
+      final List<Map<String, dynamic>> allEntries = [];
+      for (int i = 1; i <= 7; i++) {
+        final date = DateTime.now().subtract(Duration(days: i));
+        final dateString =
+            "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+        final Map<String, int> entries =
+            await Screentime().getUsageStats(dateString);
+        entries.forEach((key, value) {
+          allEntries.add({
+            'date': dateString,
+            'hour': key,
+            'seconds': value,
+          });
+        });
+      }
+
+      final Map<String, dynamic> result = {
+        'screenTimeEntries': allEntries,
+      };
+
+      bool success = await api.uploadData(userId, result);
+
+      if (success) {
+        _saveLastUpdate();
+        return true;
+      }
+    } on PlatformException catch (_) {}
+
+    return false;
+  }
 }

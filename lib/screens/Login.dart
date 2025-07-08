@@ -50,7 +50,7 @@ class LoginPage extends HookConsumerWidget {
                         color: const Color.fromARGB(255, 224, 227, 231)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.07),
+                        color: Colors.grey.withValues(alpha: 0.07),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -102,7 +102,7 @@ class LoginPage extends HookConsumerWidget {
                           side: const BorderSide(
                               color: Color.fromARGB(255, 28, 37, 65),
                               width: 1.2),
-                          backgroundColor: Colors.white.withOpacity(0.7),
+                          backgroundColor: Colors.white.withValues(alpha: 0.7),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -174,7 +174,7 @@ class LoginPage extends HookConsumerWidget {
             child: Icon(
               Icons.nightlight_round,
               size: 120,
-              color: Colors.white.withOpacity(0.10),
+              color: Colors.white.withValues(alpha: 0.10),
             ),
           ),
           Padding(
@@ -193,8 +193,8 @@ class LoginPage extends HookConsumerWidget {
                 Text(
                   'Logga in för att börja spåra din skärmtid och sömn.',
                   style: textTheme.titleMedium?.copyWith(
-                    color:
-                        const Color.fromARGB(255, 28, 37, 65).withOpacity(0.9),
+                    color: const Color.fromARGB(255, 28, 37, 65)
+                        .withValues(alpha: 0.9),
                   ),
                 ),
               ],

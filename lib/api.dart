@@ -27,6 +27,9 @@ Future<bool> uploadData(String userId, Map<String, dynamic> usageData) async {
     body: jsonEncode(usageData),
   );
 
+  print('Upload response status: ${response.statusCode}');
+  print('Upload response body: ${response.body}');
+
   if (response.statusCode == 200) {
     return true;
   } else {

@@ -54,12 +54,7 @@ class UsagePage extends HookConsumerWidget {
       return null;
     }, [usageState.hasPermission]);
 
-    return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          title: const Text("Screen time tracker"),
-        ),
-        body: const GrantPermissionView());
+    return const Scaffold(body: GrantPermissionView());
   }
 }
 
