@@ -12,6 +12,7 @@ import (
 )
 
 type ScreenTimeEntry struct {
+	Date    string `json:"date"`
 	Hour    string `json:"hour"`
 	Seconds int    `json:"seconds"`
 }
@@ -57,7 +58,7 @@ func main() {
 
 			for _, entry := range data.ScreenTimeEntries {
 				// Build a filter to check if a record exists with the same user and hour
-				filter := fmt.Sprintf("user = '%s' && hour = '%s'", id, entry.Hour)
+				filter := fmt.Sprintf("user = '%s' && hour = '%s' && date = '%s'", id, entry.Hour, entry.Date)
 				existingRecords, err := app.FindRecordsByFilter("screentime", filter, "", 5, 0)
 				if err != nil {
 					log.Printf("Error querying existing records: %v", err)
@@ -84,6 +85,7 @@ func main() {
 					// No existing record, create a new one
 					record := core.NewRecord(collection)
 					record.Set("user", id)
+					record.Set("date", entry.Date)
 					record.Set("hour", entry.Hour)
 					record.Set("seconds", entry.Seconds)
 
