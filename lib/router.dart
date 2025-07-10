@@ -35,6 +35,8 @@ class RouterNotifier extends ChangeNotifier {
       if (usageState.hasPermission) {
         return '/';
       }
+    if (userId != null) {
+      return '/';
     }
     return null;
   }
