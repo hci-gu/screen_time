@@ -114,6 +114,16 @@ class LoginPage extends HookConsumerWidget {
                             ? null
                             : () async {
                                 loading.value = true;
+                                if (userId.value.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          "Användar-ID får inte vara tomt"),
+                                    ),
+                                  );
+                                  loading.value = false;
+                                  return;
+                                }
                                 bool exists =
                                     await api.checkUserId(userId.value);
                                 await Future.delayed(

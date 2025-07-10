@@ -5,6 +5,7 @@ import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/screens/Home.dart';
 import 'package:screen_time/screens/Login.dart';
 import 'package:screen_time/screens/Usage.dart';
+import 'package:screen_time/screens/Splash.dart';
 import 'package:screen_time/providers/usage_provider.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -19,7 +20,11 @@ class RouterNotifier extends ChangeNotifier {
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
     final userId = _ref.read(userIdProvider);
+    final userIdNotifier = _ref.read(userIdProvider.notifier);
     final usageState = _ref.read(usageProvider);
+    if (userId == null && userIdNotifier.isLoading) {
+      return '/splash';
+    }
     if (usageState.isLoading) {
       return null;
     }
@@ -36,6 +41,7 @@ class RouterNotifier extends ChangeNotifier {
         return '/';
       }
     }
+    return null;
   }
 }
 
@@ -67,6 +73,12 @@ final routerProvider = Provider.family<GoRouter, RouterProps>((ref, props) {
         path: '/usage',
         builder: (BuildContext context, GoRouterState state) {
           return const UsagePage();
+        },
+      ),
+      GoRoute(
+        path: '/splash',
+        builder: (BuildContext context, GoRouterState state) {
+          return const SplashPage();
         },
       ),
     ],
