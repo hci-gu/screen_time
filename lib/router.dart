@@ -16,30 +16,37 @@ class RouterNotifier extends ChangeNotifier {
       userIdProvider,
       (_, __) => notifyListeners(),
     );
+    _ref.listen<UsageState>(
+      usageProvider,
+      (_, __) => notifyListeners(),
+    );
   }
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
     final userId = _ref.read(userIdProvider);
     final userIdNotifier = _ref.read(userIdProvider.notifier);
     final usageState = _ref.read(usageProvider);
-    if (userId == null && userIdNotifier.isLoading) {
+
+    if ((userId == null && userIdNotifier.isLoading) ||
+        (userId == null && usageState.isLoading)) {
       return '/splash';
     }
-    if (usageState.isLoading) {
-      return null;
-    }
+
     if (userId == null) {
       return '/login';
     }
+
     if (!usageState.hasPermission) {
       if (state.uri.toString() != '/usage') {
         return '/usage';
       }
+      return null;
     }
-    if (state.uri.toString() == '/login' || state.uri.toString() == '/usage') {
-      if (usageState.hasPermission) {
-        return '/';
-      }
+
+    if ((state.uri.toString() == '/login' ||
+            state.uri.toString() == '/usage') &&
+        usageState.hasPermission) {
+      return '/';
     }
     return null;
   }

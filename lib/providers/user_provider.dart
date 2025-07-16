@@ -27,7 +27,7 @@ class UserIdNotifier extends StateNotifier<String?> {
     if (userId != null) {
       await prefs.setString('userId', userId);
     } else {
-      await prefs.remove('userId');
+      await prefs.clear();
     }
   }
 }

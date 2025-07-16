@@ -30,9 +30,6 @@ Future<bool> uploadData(String userId, Map<String, dynamic> usageData) async {
     body: jsonEncode(usageData),
   );
 
-  print('Upload response status: ${response.statusCode}');
-  print('Upload response body: ${response.body}');
-
   if (response.statusCode == 200) {
     return true;
   } else {
@@ -49,11 +46,27 @@ Future<bool> answerQuestionnaire(
     await pb.collection('answers').create(body: {
       'user': userId,
       'questionnaire': questionnaireId,
-      'answers': answers,
+      'data': answers,
+      'date': DateTime.now().toIso8601String(),
     });
+
     return true;
   } catch (e) {
     throw Exception('Error answering questionnaire: $e');
+  }
+}
+
+Future<List<Map<String, dynamic>>> fetchUserAnswers(String userId) async {
+  try {
+    final result = await pb.collection('answers').getFullList(
+          filter: "user = '$userId'",
+          sort: '-created',
+          expand: 'questionnaire',
+        );
+
+    return result.map((item) => item.toJson()).toList();
+  } catch (e) {
+    return [];
   }
 }
 
@@ -89,6 +102,23 @@ Future<List<Questionnaire>> fetchQuestionnaires() async {
   return result.map((item) => Questionnaire.fromJson(item.toJson())).toList();
 }
 
+Future<Questionnaire> fetchQuestionnaireById(String questionnaireId) async {
+  try {
+    final record = await pb.collection('questionnaires').getOne(
+          questionnaireId,
+          expand: 'questions,'
+              'questions.options,'
+              'questions.subQuestions,'
+              'questions.subQuestions.options,'
+              'questions.subQuestions.subQuestions,'
+              'questions.subQuestions.subQuestions.options',
+        );
+    return Questionnaire.fromJson(record.toJson());
+  } catch (e) {
+    throw Exception('Could not fetch questionnaire structure.');
+  }
+}
+
 class AnswerOption {
   final String id;
   final String displayText;
@@ -120,6 +150,7 @@ class Question {
   final String? showWhenParentIs;
   final List<AnswerOption> options;
   final List<Question> subQuestions;
+  final bool lastDay;
 
   Question({
     required this.id,
@@ -129,6 +160,7 @@ class Question {
     this.showWhenParentIs,
     this.options = const [],
     this.subQuestions = const [],
+    this.lastDay = false,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -151,6 +183,7 @@ class Question {
           json['showWhenParentIs'] == '' ? null : json['showWhenParentIs'],
       options: options,
       subQuestions: subQuestions,
+      lastDay: json['lastDay'] == true,
     );
   }
 }
@@ -170,21 +203,9 @@ class Questionnaire {
     final expand = json['expand'] as Map<String, dynamic>? ?? {};
     final questionsData = expand['questions'] as List<dynamic>? ?? [];
 
-    final allQuestions =
-        questionsData.map((q) => Question.fromJson(q)).toList();
+    final questions = questionsData.map((q) => Question.fromJson(q)).toList();
 
-    final Set<String> subQuestionIds = {};
-    for (final question in allQuestions) {
-      for (final subQuestion in question.subQuestions) {
-        subQuestionIds.add(subQuestion.id);
-      }
-    }
-
-    final topLevelQuestions = allQuestions.where((question) {
-      return !subQuestionIds.contains(question.id);
-    }).toList();
-
-    topLevelQuestions.sort((a, b) {
+    questions.sort((a, b) {
       final aNum = int.tryParse(a.name);
       final bNum = int.tryParse(b.name);
       if (aNum != null && bNum != null) {
@@ -196,7 +217,7 @@ class Questionnaire {
     return Questionnaire(
       id: json['id'],
       name: json['name'] ?? 'Okänt formulär',
-      questions: topLevelQuestions,
+      questions: questions,
     );
   }
 }

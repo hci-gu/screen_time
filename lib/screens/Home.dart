@@ -28,6 +28,54 @@ class HomePage extends ConsumerWidget {
         elevation: 0.5,
         shadowColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Color.fromARGB(255, 28, 37, 65)),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'logout') {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Logga ut'),
+                    content: const Text(
+                        'Är du säker på att du vill logga ut? Detta kommer att rensa all lokal data. Dina anteckingar kommer att sparas.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Avbryt'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Logga ut'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  await ref.read(userIdProvider.notifier).setUserId(null);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Du har loggats ut')),
+                    );
+                  }
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout),
+                    SizedBox(width: 8),
+                    Text('Logga ut'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -116,25 +164,16 @@ class HomePage extends ConsumerWidget {
     return FutureBuilder<List<Questionnaire>>(
       future: fetchQuestionnaires(),
       builder: (context, snapshot) {
-        print(
-            'fetchQuestionnaires snapshot: hasData=${snapshot.hasData}, hasError=${snapshot.hasError}, data=${snapshot.data}, error=${snapshot.error}');
         if (snapshot.connectionState == ConnectionState.waiting) {
-          print('fetchQuestionnaires: waiting');
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          print('fetchQuestionnaires: error or empty');
           return const SizedBox.shrink();
         }
-        // Hardcode to fetch the questionnaire with the given id
         final questionnaire = snapshot.data!
             .firstWhere((q) => q.id == 't0f34uiz4jal947', orElse: () {
-          print(
-              'Questionnaire with id t0f34uiz4jal947 not found, using first.');
           return snapshot.data!.first;
         });
-        print(
-            'Using questionnaire: id=${questionnaire.id}, questions=${questionnaire.questions.length}');
         return Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(

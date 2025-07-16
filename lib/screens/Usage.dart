@@ -17,9 +17,7 @@ class UsagePage extends HookConsumerWidget {
       }
 
       ForegroundService.instance.start();
-    } catch (e) {
-      print("Error starting foreground service: $e");
-    }
+    } catch (e) {}
   }
 
   @override
