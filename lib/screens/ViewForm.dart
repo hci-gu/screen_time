@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:screen_time/theme/app_theme.dart';
 import '../api.dart';
 import '../widgets/question_widget.dart';
 
@@ -163,11 +164,12 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
         .substring(0, 16);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(questionnaireName),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        title: Text(questionnaireName,
+            style: const TextStyle(color: AppTheme.primary)),
+        backgroundColor: AppTheme.background,
+        surfaceTintColor: AppTheme.background,
         elevation: 1,
         actions: _editing
             ? [
@@ -223,7 +225,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
           child: Text(
             _error!,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.red.shade700, fontSize: 16),
+            style: TextStyle(color: AppTheme.error, fontSize: 16),
           ),
         ),
       );
@@ -237,15 +239,16 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
       children: [
         Card(
           elevation: 2,
-          shadowColor: Colors.black.withOpacity(0.1),
+          shadowColor: AppTheme.primary.withOpacity(0.1),
           margin: const EdgeInsets.only(bottom: 24),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ListTile(
-            leading: Icon(Icons.calendar_today_outlined,
-                color: Theme.of(context).primaryColor),
+            leading: const Icon(Icons.calendar_today_outlined,
+                color: AppTheme.primary),
             title: const Text('Ifyllt datum',
-                style: TextStyle(fontWeight: FontWeight.w500)),
+                style: TextStyle(
+                    fontWeight: FontWeight.w500, color: AppTheme.primary)),
             subtitle: Text(date ?? 'Okänt datum'),
           ),
         ),
@@ -317,10 +320,10 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
         children: [
           Text(
             html_parser.parse(question.text).body?.text ?? '',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
+              color: AppTheme.primary,
             ),
           ),
           const Divider(height: 16, thickness: 1),
@@ -331,10 +334,9 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
 
   Widget _buildAnswerCard(String questionText, String answerText,
       {required int level}) {
-    final theme = Theme.of(context);
     return Card(
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: AppTheme.primary.withOpacity(0.1),
       margin: EdgeInsets.only(left: 12.0 * level, bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: IntrinsicHeight(
@@ -344,7 +346,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
               Container(
                 width: 4,
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.2),
+                  color: AppTheme.primary.withOpacity(0.2),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     bottomLeft: Radius.circular(16),
@@ -359,15 +361,19 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
                   children: [
                     Text(
                       questionText,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: Colors.grey.shade700),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       answerText,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.primaryColor,
+                      style: const TextStyle(
+                        color: AppTheme.accent,
                         fontWeight: FontWeight.w600,
+                        fontSize: 15,
                       ),
                     ),
                   ],

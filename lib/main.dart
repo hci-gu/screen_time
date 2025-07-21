@@ -3,6 +3,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:screen_time/router.dart';
+import 'package:screen_time/theme/app_theme.dart';
 import 'package:screen_time/services/foreground_service.dart';
 import 'providers/user_provider.dart';
 
@@ -30,21 +31,7 @@ class MyApp extends HookConsumerWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Skärmtidstracker',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 2,
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 2,
-          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        ),
-      ),
+      theme: AppTheme.themeData,
       routerConfig: router,
     );
   }

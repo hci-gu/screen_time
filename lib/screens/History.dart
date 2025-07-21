@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screen_time/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import '../api.dart';
 import '../providers/user_provider.dart';
@@ -40,17 +41,17 @@ class HistoryPage extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history_edu_outlined,
-                size: 80, color: Colors.grey.shade400),
+            const Icon(Icons.history_edu_outlined,
+                size: 80, color: AppTheme.cardBorder),
             const SizedBox(height: 24),
             Text('Inga anteckningar',
-                style: textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold, color: AppTheme.primary)),
             const SizedBox(height: 8),
             Text(
               'Du har inte fyllt i några formulär ännu. Dina svar kommer att visas här.',
               textAlign: TextAlign.center,
-              style: textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+              style: textTheme.bodyLarge?.copyWith(color: AppTheme.cardBorder),
             ),
           ],
         ),
@@ -66,16 +67,16 @@ class HistoryPage extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 80, color: Colors.red.shade300),
+            const Icon(Icons.error_outline, size: 80, color: AppTheme.error),
             const SizedBox(height: 24),
             Text('Ett fel uppstod',
-                style: textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold, color: AppTheme.error)),
             const SizedBox(height: 8),
             Text(
               'Kunde inte ladda dina tidigare anteckningar. Vänligen försök igen senare.',
               textAlign: TextAlign.center,
-              style: textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+              style: textTheme.bodyLarge?.copyWith(color: AppTheme.cardBorder),
             ),
           ],
         ),
@@ -91,7 +92,7 @@ class HistoryPage extends ConsumerWidget {
 
     return Card(
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: AppTheme.primary.withOpacity(0.1),
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
       child: InkWell(
@@ -107,8 +108,8 @@ class HistoryPage extends ConsumerWidget {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Icon(Icons.description_outlined,
-                  color: theme.primaryColor, size: 36),
+              const Icon(Icons.description_outlined,
+                  color: AppTheme.primary, size: 36),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -116,19 +117,19 @@ class HistoryPage extends ConsumerWidget {
                   children: [
                     Text(
                       date,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold, color: AppTheme.primary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle.isNotEmpty ? subtitle : 'Tid okänd',
                       style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: Colors.grey.shade600),
+                          ?.copyWith(color: AppTheme.cardBorder),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey.shade400),
+              const Icon(Icons.chevron_right, color: AppTheme.cardBorder),
             ],
           ),
         ),
@@ -141,11 +142,12 @@ class HistoryPage extends ConsumerWidget {
     final userId = ref.watch(userIdProvider);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Tidigare anteckningar'),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        title: const Text('Tidigare anteckningar',
+            style: TextStyle(color: AppTheme.primary)),
+        backgroundColor: AppTheme.background,
+        surfaceTintColor: AppTheme.background,
         elevation: 1,
       ),
       body: userId == null || userId.isEmpty

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/usage_provider.dart';
 import '../providers/user_provider.dart';
+import 'package:screen_time/theme/app_theme.dart';
 import '../api.dart';
 import 'Entry.dart';
 import 'History.dart';
@@ -17,17 +18,16 @@ class HomePage extends ConsumerWidget {
     final userId = ref.watch(userIdProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.background,
         title: const Text('Sömndagbok',
             style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Color.fromARGB(255, 28, 37, 65))),
+                fontWeight: FontWeight.w600, color: AppTheme.primary)),
         centerTitle: true,
         elevation: 0.5,
         shadowColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Color.fromARGB(255, 28, 37, 65)),
+        iconTheme: IconThemeData(color: AppTheme.primary),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -89,17 +89,17 @@ class HomePage extends ConsumerWidget {
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.history_rounded,
-                      color: Color.fromARGB(255, 28, 37, 65)),
+                      color: AppTheme.primary),
                   label: const Text(
                     'Se tidigare dagboksanteckningar',
                     style: TextStyle(
-                      color: Color.fromARGB(255, 28, 37, 65),
+                      color: AppTheme.primary,
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 224, 227, 231),
+                    backgroundColor: AppTheme.cardBorder,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -116,18 +116,17 @@ class HomePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.cloud_upload,
-                      color: Color.fromARGB(255, 28, 37, 65)),
+                  icon: const Icon(Icons.cloud_upload, color: AppTheme.primary),
                   label: const Text(
                     'Ladda upp skärmtid (7 dagar)',
                     style: TextStyle(
-                      color: Color.fromARGB(255, 28, 37, 65),
+                      color: AppTheme.primary,
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 224, 227, 231),
+                    backgroundColor: AppTheme.cardBorder,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -206,7 +205,7 @@ class HomePage extends ConsumerWidget {
                     Text(
                       'God morgon!',
                       style: textTheme.headlineMedium?.copyWith(
-                        color: const Color.fromARGB(255, 28, 37, 65),
+                        color: AppTheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -214,21 +213,18 @@ class HomePage extends ConsumerWidget {
                     Text(
                       'Dags att logga nattens sömn.',
                       style: textTheme.titleMedium?.copyWith(
-                        color: const Color.fromARGB(255, 28, 37, 65)
-                            .withValues(alpha: 0.9),
+                        color: AppTheme.primary.withOpacity(0.9),
                       ),
                     ),
                     const SizedBox(height: 24),
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.add,
-                          color: Color.fromARGB(255, 28, 37, 65)),
+                      icon: const Icon(Icons.add, color: AppTheme.primary),
                       label: const Text('Fyll i dagbok',
-                          style: TextStyle(
-                              color: Color.fromARGB(255, 28, 37, 65))),
+                          style: TextStyle(color: AppTheme.primary)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(
-                            color: Color.fromARGB(255, 28, 37, 65), width: 1.2),
-                        backgroundColor: Colors.white.withValues(alpha: 0.7),
+                            color: AppTheme.primary, width: 1.2),
+                        backgroundColor: AppTheme.background.withOpacity(0.7),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(

@@ -5,6 +5,7 @@ import 'package:screen_time/api.dart' as api;
 import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/providers/usage_provider.dart';
 import 'package:screen_time/screens/Usage.dart';
+import 'package:screen_time/theme/app_theme.dart';
 
 class LoginPage extends HookConsumerWidget {
   const LoginPage({super.key});
@@ -16,19 +17,19 @@ class LoginPage extends HookConsumerWidget {
     final usageState = ref.watch(usageProvider);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    // Use AppTheme for colors
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.background,
         title: const Text('Skärmtidstracker',
             style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Color.fromARGB(255, 28, 37, 65))),
+                fontWeight: FontWeight.w600, color: AppTheme.primary)),
         centerTitle: true,
         elevation: 0.5,
         shadowColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Color.fromARGB(255, 28, 37, 65)),
+        iconTheme: IconThemeData(color: AppTheme.primary),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -44,13 +45,12 @@ class LoginPage extends HookConsumerWidget {
                   constraints: const BoxConstraints(maxWidth: 400),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.background,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: const Color.fromARGB(255, 224, 227, 231)),
+                    border: Border.all(color: AppTheme.cardBorder),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.07),
+                        color: AppTheme.primary.withOpacity(0.07),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -74,7 +74,7 @@ class LoginPage extends HookConsumerWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color.fromARGB(255, 245, 247, 250),
+                          fillColor: AppTheme.inputFill,
                         ),
                       ),
                       const SizedBox(height: 20.0),
@@ -86,23 +86,19 @@ class LoginPage extends HookConsumerWidget {
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color.fromARGB(255, 28, 37, 65)),
+                                      AppTheme.primary),
                                 ),
                               )
-                            : const Icon(Icons.login,
-                                color: Color.fromARGB(255, 28, 37, 65)),
+                            : const Icon(Icons.login, color: AppTheme.primary),
                         label: loading.value
-                            ? const Text("Loggar in...",
-                                style: TextStyle(
-                                    color: Color.fromARGB(255, 28, 37, 65)))
-                            : const Text("Logga in",
-                                style: TextStyle(
-                                    color: Color.fromARGB(255, 28, 37, 65))),
+                            ? Text("Loggar in...",
+                                style: TextStyle(color: AppTheme.primary))
+                            : Text("Logga in",
+                                style: TextStyle(color: AppTheme.primary)),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(
-                              color: Color.fromARGB(255, 28, 37, 65),
-                              width: 1.2),
-                          backgroundColor: Colors.white.withValues(alpha: 0.7),
+                              color: AppTheme.primary, width: 1.2),
+                          backgroundColor: AppTheme.background.withOpacity(0.7),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -174,7 +170,7 @@ class LoginPage extends HookConsumerWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+        border: Border.all(color: AppTheme.cardBorder),
       ),
       child: Stack(
         children: [
@@ -195,7 +191,7 @@ class LoginPage extends HookConsumerWidget {
                 Text(
                   'Välkommen!',
                   style: textTheme.headlineMedium?.copyWith(
-                    color: const Color.fromARGB(255, 28, 37, 65),
+                    color: AppTheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -203,8 +199,7 @@ class LoginPage extends HookConsumerWidget {
                 Text(
                   'Logga in för att börja spåra din skärmtid och sömn.',
                   style: textTheme.titleMedium?.copyWith(
-                    color: const Color.fromARGB(255, 28, 37, 65)
-                        .withValues(alpha: 0.9),
+                    color: AppTheme.primary.withOpacity(0.9),
                   ),
                 ),
               ],

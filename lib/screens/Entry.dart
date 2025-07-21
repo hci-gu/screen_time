@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screen_time/theme/app_theme.dart';
 import 'package:html/parser.dart' as html_parser;
 import '../api.dart';
 import '../providers/user_provider.dart';
@@ -151,8 +152,13 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
             includeLastDay: false);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Nytt dagboksinlägg'),
+        title: const Text('Nytt dagboksinlägg',
+            style: TextStyle(color: AppTheme.primary)),
+        backgroundColor: AppTheme.background,
+        surfaceTintColor: AppTheme.background,
+        elevation: 1,
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
@@ -170,13 +176,16 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.lock_open),
-                label: const Text('Visa frågor för sista dagen'),
+                icon: const Icon(Icons.lock_open, color: AppTheme.primary),
+                label: const Text('Visa frågor för sista dagen',
+                    style: TextStyle(color: AppTheme.primary)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange.shade100,
-                  foregroundColor: Colors.orange.shade900,
+                  backgroundColor: AppTheme.accent.withOpacity(0.15),
+                  foregroundColor: AppTheme.primary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: const TextStyle(fontSize: 16),
+                  textStyle:
+                      const TextStyle(fontSize: 16, color: AppTheme.primary),
+                  elevation: 0,
                 ),
                 onPressed: () {
                   setState(() {
@@ -192,8 +201,12 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
             return ElevatedButton(
               onPressed: _submitForm,
               style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: AppTheme.background,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16),
+                textStyle:
+                    const TextStyle(fontSize: 16, color: AppTheme.background),
+                elevation: 0,
               ),
               child: const Text('Skicka'),
             );

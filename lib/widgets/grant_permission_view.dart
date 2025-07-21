@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/usage_provider.dart';
+import 'package:screen_time/theme/app_theme.dart';
 
 class GrantPermissionView extends ConsumerWidget {
   const GrantPermissionView({super.key});
@@ -8,21 +9,19 @@ class GrantPermissionView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usageNotifier = ref.read(usageProvider.notifier);
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: AppTheme.elementPadding,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 400),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.background,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+            border: Border.all(color: AppTheme.cardBorder),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.08),
+                color: Colors.grey.withOpacity(0.08),
                 blurRadius: 18,
                 offset: const Offset(0, 6),
               ),
@@ -33,18 +32,17 @@ class GrantPermissionView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(Icons.privacy_tip_rounded,
-                  size: 56, color: theme.primaryColor),
-              const SizedBox(height: 18),
+                  size: 56, color: AppTheme.primary),
+              AppTheme.spacer,
               Text(
                 'Ge åtkomst till användarspårning',
-                style:
-                    textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: AppTheme.headLine2,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
               Text(
                 'För att appen ska kunna logga din skärmtid behöver du ge åtkomst till användarspårning i inställningarna.',
-                style: textTheme.bodyMedium?.copyWith(color: Colors.black87),
+                style: AppTheme.body,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 28),
@@ -52,7 +50,7 @@ class GrantPermissionView extends ConsumerWidget {
                 icon: const Icon(Icons.settings_rounded),
                 label: const Text('Öppna inställningar'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 91, 192, 190),
+                  backgroundColor: AppTheme.accent,
                   foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 14),

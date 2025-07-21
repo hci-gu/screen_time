@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:screen_time/providers/usage_provider.dart';
 import 'package:screen_time/services/foreground_service.dart';
+import 'package:screen_time/theme/app_theme.dart';
 import 'package:screen_time/widgets/grant_permission_view.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,7 +53,13 @@ class UsagePage extends HookConsumerWidget {
       return null;
     }, [usageState.hasPermission]);
 
-    return const Scaffold(body: GrantPermissionView());
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Container(
+        color: AppTheme.background,
+        child: const GrantPermissionView(),
+      ),
+    );
   }
 }
 

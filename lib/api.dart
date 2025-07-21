@@ -43,15 +43,19 @@ Future<bool> answerQuestionnaire(
   Map<String, dynamic> answers,
 ) async {
   try {
-    await pb.collection('answers').create(body: {
+    final body = {
       'user': userId,
       'questionnaire': questionnaireId,
       'data': answers,
       'date': DateTime.now().toIso8601String(),
-    });
-
+    };
+    print('answerQuestionnaire: body to send:');
+    print(body);
+    await pb.collection('answers').create(body: body);
+    print('answerQuestionnaire: sent successfully');
     return true;
   } catch (e) {
+    print('answerQuestionnaire: error: $e');
     throw Exception('Error answering questionnaire: $e');
   }
 }
