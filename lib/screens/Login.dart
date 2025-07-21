@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:screen_time/api.dart' as api;
@@ -6,6 +7,56 @@ import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/providers/usage_provider.dart';
 import 'package:screen_time/screens/Usage.dart';
 import 'package:screen_time/theme/app_theme.dart';
+
+/// En formatter som hanterar användarid
+/// om man skriver "099" -> blir "099-"
+/// om man trycker backsteg på "099-" -> blir "09"
+class UserIdFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.length < oldValue.text.length) {
+      if (oldValue.text.endsWith('-') &&
+          (oldValue.text.length == 4 || oldValue.text.length == 8)) {
+        final newText = oldValue.text.substring(0, oldValue.text.length - 2);
+
+        return TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+      }
+      return newValue;
+    }
+
+    final String rawText =
+        newValue.text.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (rawText.length > 9) {
+      return oldValue;
+    }
+
+    var buffer = StringBuffer();
+    for (int i = 0; i < rawText.length; i++) {
+      buffer.write(rawText[i]);
+      if ((i == 2 || i == 5) && i < rawText.length - 1) {
+        buffer.write('-');
+      }
+    }
+
+    String formattedText = buffer.toString();
+
+    if ((rawText.length == 3 || rawText.length == 6) &&
+        newValue.text.length > oldValue.text.length) {
+      if (newValue.text.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '') == rawText) {
+        formattedText += '-';
+      }
+    }
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
+    );
+  }
+}
 
 class LoginPage extends HookConsumerWidget {
   const LoginPage({super.key});
@@ -17,6 +68,7 @@ class LoginPage extends HookConsumerWidget {
     final usageState = ref.watch(usageProvider);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final controller = useTextEditingController();
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -63,11 +115,17 @@ class LoginPage extends HookConsumerWidget {
                               ?.copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 20.0),
                       TextField(
+                        keyboardType: TextInputType.visiblePassword,
+                        controller: controller,
+                        inputFormatters: [
+                          UserIdFormatter(),
+                        ],
                         onChanged: (value) {
                           userId.value = value;
                         },
                         decoration: InputDecoration(
                           labelText: "Användar-ID",
+                          hintText: "Format: 123-abc-456",
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -122,7 +180,7 @@ class LoginPage extends HookConsumerWidget {
                                 bool exists =
                                     await api.checkUserId(userId.value);
                                 await Future.delayed(
-                                    const Duration(seconds: 1));
+                                    const Duration(milliseconds: 500));
                                 if (exists) {
                                   ref
                                       .read(userIdProvider.notifier)
@@ -133,7 +191,6 @@ class LoginPage extends HookConsumerWidget {
                                       MaterialPageRoute(
                                           builder: (_) => const UsagePage()),
                                     );
-                                    loading.value = false;
                                     return;
                                   }
                                 } else if (context.mounted) {
@@ -179,7 +236,7 @@ class LoginPage extends HookConsumerWidget {
             child: Icon(
               Icons.nightlight_round,
               size: 120,
-              color: Colors.white.withValues(alpha: 0.10),
+              color: Colors.white.withOpacity(0.10),
             ),
           ),
           Padding(
