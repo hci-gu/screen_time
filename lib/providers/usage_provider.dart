@@ -191,11 +191,14 @@ class UsageNotifier extends StateNotifier<UsageState> {
   }
 
   Future<bool> uploadLast7Days(String userId) async {
+    if (!state.hasPermission) {
+      print('Permission not granted, aborting upload.');
+      return false;
+    }
     if (!isAndroid) {
       bool success = await api.uploadData(userId, {'screenTimeEntries': []});
       return success;
     }
-
     try {
       final List<Map<String, dynamic>> allEntries = [];
       for (int i = 1; i <= 7; i++) {

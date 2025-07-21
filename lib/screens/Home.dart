@@ -6,6 +6,7 @@ import 'package:screen_time/theme/app_theme.dart';
 import '../api.dart';
 import 'Entry.dart';
 import 'History.dart';
+import 'Usage.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -15,6 +16,7 @@ class HomePage extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final usageNotifier = ref.read(usageProvider.notifier);
+    final usageState = ref.watch(usageProvider);
     final userId = ref.watch(userIdProvider);
 
     return Scaffold(
@@ -38,7 +40,7 @@ class HomePage extends ConsumerWidget {
                   builder: (context) => AlertDialog(
                     title: const Text('Logga ut'),
                     content: const Text(
-                        'Är du säker på att du vill logga ut? Detta kommer att rensa all lokal data. Dina anteckingar kommer att sparas.'),
+                        'Är du säker på att du vill logga ut? Detta kommer att rensa all lokal data. Dina anteckningar kommer att sparas.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
@@ -134,6 +136,16 @@ class HomePage extends ConsumerWidget {
                     elevation: 0,
                   ),
                   onPressed: () async {
+                    await usageNotifier.checkUsageStatsPermission();
+                    final refreshedUsageState = ref.read(usageProvider);
+                    if (!refreshedUsageState.hasPermission) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const UsagePage()),
+                      );
+                      return;
+                    }
                     if (userId != null && userId.isNotEmpty) {
                       final success =
                           await usageNotifier.uploadLast7Days(userId);
