@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import '../api.dart';
+import '../theme/app_theme.dart';
 
 class QuestionWidget extends StatefulWidget {
   final Question question;
@@ -20,6 +21,7 @@ class QuestionWidget extends StatefulWidget {
 
 class _QuestionWidgetState extends State<QuestionWidget> {
   TextEditingController? _textController;
+  FocusNode? _focusNode;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
       _textController = TextEditingController(
         text: widget.answers[widget.question.id]?.toString() ?? '',
       );
+      _focusNode = FocusNode();
     }
   }
 
@@ -48,6 +51,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
   @override
   void dispose() {
     _textController?.dispose();
+    _focusNode?.dispose();
     super.dispose();
   }
 
@@ -87,7 +91,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
         border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha((0.05 * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -104,7 +108,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withAlpha((0.03 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
@@ -151,11 +155,10 @@ class _QuestionWidgetState extends State<QuestionWidget> {
 
   Widget _buildQuestionInput(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-    const primaryTextColor = Color.fromARGB(255, 28, 37, 65);
-    const accentColor = Color.fromARGB(255, 91, 192, 190);
-    const borderColor = Color.fromARGB(255, 224, 227, 231);
-    const inputFillColor = Color.fromARGB(255, 245, 247, 250);
+    const primaryTextColor = AppTheme.primary;
+    const accentColor = AppTheme.accent;
+    const borderColor = AppTheme.cardBorder;
+    const inputFillColor = AppTheme.inputFill;
 
     switch (widget.question.type) {
       case 'yesNo':
@@ -164,7 +167,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildQuestionText(widget.question.text),
-            const SizedBox(height: 16),
+            AppTheme.spacer,
             ...widget.question.options.map((option) {
               final isSelected =
                   widget.answers[widget.question.id]?.toString() == option.id;
@@ -178,9 +181,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
                   ),
                 ),
                 child: RadioListTile<String>(
-                  title: Text(option.displayText,
-                      style: textTheme.bodyLarge
-                          ?.copyWith(color: primaryTextColor)),
+                  title: Text(option.displayText, style: AppTheme.body),
                   value: option.id,
                   groupValue: widget.answers[widget.question.id]?.toString(),
                   onChanged: (value) =>
@@ -189,7 +190,9 @@ class _QuestionWidgetState extends State<QuestionWidget> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   controlAffinity: ListTileControlAffinity.trailing,
-                  tileColor: isSelected ? accentColor.withOpacity(0.05) : null,
+                  tileColor: isSelected
+                      ? accentColor.withAlpha((0.05 * 255).round())
+                      : null,
                 ),
               );
             }).toList(),
@@ -202,9 +205,10 @@ class _QuestionWidgetState extends State<QuestionWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildQuestionText(widget.question.text),
-            const SizedBox(height: 12),
+            AppTheme.spacer,
             TextFormField(
               controller: _textController,
+              focusNode: _focusNode,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -221,9 +225,14 @@ class _QuestionWidgetState extends State<QuestionWidget> {
                 filled: true,
                 fillColor: inputFillColor,
               ),
+              style: AppTheme.body,
               keyboardType: widget.question.type == 'number'
                   ? const TextInputType.numberWithOptions(decimal: true)
                   : TextInputType.text,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) {
+                _focusNode?.unfocus();
+              },
               onChanged: (value) => widget.onAnswered(
                   widget.question.id,
                   widget.question.type == 'number'
@@ -251,13 +260,13 @@ class _QuestionWidgetState extends State<QuestionWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildQuestionText(widget.question.text),
-            const SizedBox(height: 8),
+            AppTheme.spacer,
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 activeTrackColor: accentColor,
-                inactiveTrackColor: accentColor.withOpacity(0.3),
+                inactiveTrackColor: accentColor.withAlpha((0.3 * 255).round()),
                 thumbColor: accentColor,
-                overlayColor: accentColor.withOpacity(0.2),
+                overlayColor: accentColor.withAlpha((0.2 * 255).round()),
                 valueIndicatorColor: primaryTextColor,
                 valueIndicatorTextStyle: const TextStyle(color: Colors.white),
               ),
@@ -274,7 +283,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
             Center(
               child: Text(
                 currentLabel,
-                style: textTheme.bodyMedium?.copyWith(
+                style: AppTheme.body.copyWith(
                     color: primaryTextColor.withOpacity(0.8),
                     fontWeight: FontWeight.bold),
               ),
@@ -287,7 +296,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildQuestionText(widget.question.text),
-            const SizedBox(height: 12),
+            AppTheme.spacer,
             InkWell(
               onTap: () async {
                 final time = await showTimePicker(
@@ -311,8 +320,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding: AppTheme.elementPadding,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: borderColor),
@@ -324,8 +332,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
                     Text(
                       widget.answers[widget.question.id]?.toString() ??
                           'Välj tid',
-                      style: textTheme.bodyLarge
-                          ?.copyWith(color: primaryTextColor),
+                      style: AppTheme.body.copyWith(color: primaryTextColor),
                     ),
                     const Icon(Icons.access_time_outlined,
                         color: primaryTextColor),

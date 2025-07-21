@@ -108,20 +108,19 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
       {bool includeLastDay = false}) {
     List<Question> filtered = [];
     for (final q in questions) {
-      final isLastDay = (q as dynamic).lastDay == true;
-      if (!isLastDay || includeLastDay) {
+      if (!q.lastDay || includeLastDay) {
         final filteredSubs =
             _filterQuestions(q.subQuestions, includeLastDay: includeLastDay);
         filtered.add(
           Question(
-            id: q.id,
-            name: q.name,
-            text: q.text,
-            type: q.type,
-            showWhenParentIs: q.showWhenParentIs,
-            options: q.options,
-            subQuestions: filteredSubs,
-          ),
+              id: q.id,
+              name: q.name,
+              text: q.text,
+              type: q.type,
+              showWhenParentIs: q.showWhenParentIs,
+              options: q.options,
+              subQuestions: filteredSubs,
+              lastDay: q.lastDay),
         );
       }
     }
@@ -131,8 +130,9 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
   bool get _hasLastDayQuestions {
     bool found = false;
     void check(List<Question> questions) {
+      if (found) return;
       for (final q in questions) {
-        if ((q as dynamic).lastDay == true) {
+        if (q.lastDay) {
           found = true;
           return;
         }
@@ -160,58 +160,64 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
         surfaceTintColor: AppTheme.background,
         elevation: 1,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: visibleQuestions.length + (_hasLastDayQuestions ? 3 : 2),
-        itemBuilder: (context, index) {
-          if (index < visibleQuestions.length) {
-            final question = visibleQuestions[index];
-            return QuestionWidget(
-              question: question,
-              onAnswered: _onAnswered,
-              answers: _answers,
-            );
-          } else if (_hasLastDayQuestions && index == visibleQuestions.length) {
-            if (_showLastDayQuestions) return const SizedBox(height: 0);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.lock_open, color: AppTheme.primary),
-                label: const Text('Visa frågor för sista dagen',
-                    style: TextStyle(color: AppTheme.primary)),
+      body: SafeArea(
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: visibleQuestions.length +
+              (_hasLastDayQuestions && !_showLastDayQuestions ? 3 : 2),
+          itemBuilder: (context, index) {
+            if (index < visibleQuestions.length) {
+              final question = visibleQuestions[index];
+              return QuestionWidget(
+                question: question,
+                onAnswered: _onAnswered,
+                answers: _answers,
+              );
+            } else if (_hasLastDayQuestions &&
+                !_showLastDayQuestions &&
+                index == visibleQuestions.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.lock_open, color: AppTheme.primary),
+                  label: const Text('Visa frågor för sista dagen',
+                      style: TextStyle(color: AppTheme.primary)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        AppTheme.accent.withAlpha((0.15 * 255).round()),
+                    foregroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    textStyle:
+                        const TextStyle(fontSize: 16, color: AppTheme.primary),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showLastDayQuestions = true;
+                    });
+                  },
+                ),
+              );
+            } else if (index ==
+                visibleQuestions.length +
+                    (_hasLastDayQuestions && !_showLastDayQuestions ? 1 : 0)) {
+              return const SizedBox(height: 24);
+            } else {
+              return ElevatedButton(
+                onPressed: _submitForm,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accent.withOpacity(0.15),
-                  foregroundColor: AppTheme.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: AppTheme.background,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle:
-                      const TextStyle(fontSize: 16, color: AppTheme.primary),
+                      const TextStyle(fontSize: 16, color: AppTheme.background),
                   elevation: 0,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _showLastDayQuestions = true;
-                  });
-                },
-              ),
-            );
-          } else if (index ==
-              visibleQuestions.length + (_hasLastDayQuestions ? 1 : 0)) {
-            return const SizedBox(height: 24);
-          } else {
-            return ElevatedButton(
-              onPressed: _submitForm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: AppTheme.background,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle:
-                    const TextStyle(fontSize: 16, color: AppTheme.background),
-                elevation: 0,
-              ),
-              child: const Text('Skicka'),
-            );
-          }
-        },
+                child: const Text('Skicka'),
+              );
+            }
+          },
+        ),
       ),
     );
   }

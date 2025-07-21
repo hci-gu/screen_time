@@ -225,7 +225,7 @@ class HomePage extends ConsumerWidget {
                     Text(
                       'Dags att logga nattens sömn.',
                       style: textTheme.titleMedium?.copyWith(
-                        color: AppTheme.primary.withOpacity(0.9),
+                        color: AppTheme.primary.withAlpha((0.9 * 255).round()),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -236,7 +236,8 @@ class HomePage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(
                             color: AppTheme.primary, width: 1.2),
-                        backgroundColor: AppTheme.background.withOpacity(0.7),
+                        backgroundColor:
+                            AppTheme.background.withAlpha((0.7 * 255).round()),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(

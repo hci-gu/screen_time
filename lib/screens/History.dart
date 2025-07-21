@@ -92,7 +92,7 @@ class HistoryPage extends ConsumerWidget {
 
     return Card(
       elevation: 2,
-      shadowColor: AppTheme.primary.withOpacity(0.1),
+      shadowColor: AppTheme.primary.withAlpha((0.1 * 255).round()),
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
       child: InkWell(

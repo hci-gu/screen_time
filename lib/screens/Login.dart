@@ -17,8 +17,6 @@ class LoginPage extends HookConsumerWidget {
     final usageState = ref.watch(usageProvider);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    // Use AppTheme for colors
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -50,7 +48,7 @@ class LoginPage extends HookConsumerWidget {
                     border: Border.all(color: AppTheme.cardBorder),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.07),
+                        color: AppTheme.primary.withAlpha((0.07 * 255).round()),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -98,7 +96,8 @@ class LoginPage extends HookConsumerWidget {
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(
                               color: AppTheme.primary, width: 1.2),
-                          backgroundColor: AppTheme.background.withOpacity(0.7),
+                          backgroundColor: AppTheme.background
+                              .withAlpha((0.7 * 255).round()),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -199,7 +198,7 @@ class LoginPage extends HookConsumerWidget {
                 Text(
                   'Logga in för att börja spåra din skärmtid och sömn.',
                   style: textTheme.titleMedium?.copyWith(
-                    color: AppTheme.primary.withOpacity(0.9),
+                    color: AppTheme.primary.withAlpha((0.9 * 255).round()),
                   ),
                 ),
               ],

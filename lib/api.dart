@@ -207,9 +207,28 @@ class Questionnaire {
     final expand = json['expand'] as Map<String, dynamic>? ?? {};
     final questionsData = expand['questions'] as List<dynamic>? ?? [];
 
-    final questions = questionsData.map((q) => Question.fromJson(q)).toList();
+    final allQuestions =
+        questionsData.map((q) => Question.fromJson(q)).toList();
 
-    questions.sort((a, b) {
+    final Set<String> subQuestionIds = {};
+    void collectSubQuestionIds(List<Question> questions) {
+      for (final q in questions) {
+        for (final sub in q.subQuestions) {
+          subQuestionIds.add(sub.id);
+
+          if (sub.subQuestions.isNotEmpty) {
+            collectSubQuestionIds(sub.subQuestions);
+          }
+        }
+      }
+    }
+
+    collectSubQuestionIds(allQuestions);
+
+    final topLevelQuestions =
+        allQuestions.where((q) => !subQuestionIds.contains(q.id)).toList();
+
+    topLevelQuestions.sort((a, b) {
       final aNum = int.tryParse(a.name);
       final bNum = int.tryParse(b.name);
       if (aNum != null && bNum != null) {
@@ -221,7 +240,7 @@ class Questionnaire {
     return Questionnaire(
       id: json['id'],
       name: json['name'] ?? 'Okänt formulär',
-      questions: questions,
+      questions: topLevelQuestions,
     );
   }
 }

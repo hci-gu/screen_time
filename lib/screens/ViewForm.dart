@@ -239,7 +239,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
       children: [
         Card(
           elevation: 2,
-          shadowColor: AppTheme.primary.withOpacity(0.1),
+          shadowColor: AppTheme.primary.withAlpha((0.1 * 255).round()),
           margin: const EdgeInsets.only(bottom: 24),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -336,7 +336,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
       {required int level}) {
     return Card(
       elevation: 2,
-      shadowColor: AppTheme.primary.withOpacity(0.1),
+      shadowColor: AppTheme.primary.withAlpha((0.1 * 255).round()),
       margin: EdgeInsets.only(left: 12.0 * level, bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: IntrinsicHeight(
@@ -346,7 +346,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
               Container(
                 width: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.2),
+                  color: AppTheme.primary.withAlpha((0.2 * 255).round()),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     bottomLeft: Radius.circular(16),
