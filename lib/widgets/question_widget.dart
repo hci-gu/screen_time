@@ -284,7 +284,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
               child: Text(
                 currentLabel,
                 style: AppTheme.body.copyWith(
-                    color: primaryTextColor.withOpacity(0.8),
+                    color: primaryTextColor.withAlpha((0.8 * 255).round()),
                     fontWeight: FontWeight.bold),
               ),
             ),
@@ -299,6 +299,8 @@ class _QuestionWidgetState extends State<QuestionWidget> {
             AppTheme.spacer,
             InkWell(
               onTap: () async {
+                FocusScope.of(context).unfocus();
+                await Future.delayed(const Duration(milliseconds: 50));
                 final time = await showTimePicker(
                   context: context,
                   initialTime: TimeOfDay.now(),

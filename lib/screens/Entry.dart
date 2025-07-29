@@ -74,7 +74,9 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
   }
 
   Future<void> _submitForm() async {
-    final userId = ref.read(userIdProvider);
+
+    final userState = ref.read(userIdProvider);
+    final userId = userState.userId;
     if (userId == null || userId.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,62 +163,66 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
         elevation: 1,
       ),
       body: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16.0),
-          itemCount: visibleQuestions.length +
-              (_hasLastDayQuestions && !_showLastDayQuestions ? 3 : 2),
-          itemBuilder: (context, index) {
-            if (index < visibleQuestions.length) {
-              final question = visibleQuestions[index];
-              return QuestionWidget(
-                question: question,
-                onAnswered: _onAnswered,
-                answers: _answers,
-              );
-            } else if (_hasLastDayQuestions &&
-                !_showLastDayQuestions &&
-                index == visibleQuestions.length) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.lock_open, color: AppTheme.primary),
-                  label: const Text('Visa frågor för sista dagen',
-                      style: TextStyle(color: AppTheme.primary)),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: visibleQuestions.length +
+                (_hasLastDayQuestions && !_showLastDayQuestions ? 3 : 2),
+            itemBuilder: (context, index) {
+              if (index < visibleQuestions.length) {
+                final question = visibleQuestions[index];
+                return QuestionWidget(
+                  question: question,
+                  onAnswered: _onAnswered,
+                  answers: _answers,
+                );
+              } else if (_hasLastDayQuestions &&
+                  !_showLastDayQuestions &&
+                  index == visibleQuestions.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.lock_open, color: AppTheme.primary),
+                    label: const Text('Visa frågor för sista dagen',
+                        style: TextStyle(color: AppTheme.primary)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          AppTheme.accent.withAlpha((0.15 * 255).round()),
+                      foregroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      textStyle:
+                          const TextStyle(fontSize: 16, color: AppTheme.primary),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showLastDayQuestions = true;
+                      });
+                    },
+                  ),
+                );
+              } else if (index ==
+                  visibleQuestions.length +
+                      (_hasLastDayQuestions && !_showLastDayQuestions ? 1 : 0)) {
+                return const SizedBox(height: 24);
+              } else {
+                return ElevatedButton(
+                  onPressed: _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        AppTheme.accent.withAlpha((0.15 * 255).round()),
-                    foregroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: AppTheme.background,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     textStyle:
-                        const TextStyle(fontSize: 16, color: AppTheme.primary),
+                        const TextStyle(fontSize: 16, color: AppTheme.background),
                     elevation: 0,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _showLastDayQuestions = true;
-                    });
-                  },
-                ),
-              );
-            } else if (index ==
-                visibleQuestions.length +
-                    (_hasLastDayQuestions && !_showLastDayQuestions ? 1 : 0)) {
-              return const SizedBox(height: 24);
-            } else {
-              return ElevatedButton(
-                onPressed: _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: AppTheme.background,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle:
-                      const TextStyle(fontSize: 16, color: AppTheme.background),
-                  elevation: 0,
-                ),
-                child: const Text('Skicka'),
-              );
-            }
-          },
+                  child: const Text('Skicka'),
+                );
+              }
+            },
+          ),
         ),
       ),
     );

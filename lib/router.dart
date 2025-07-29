@@ -12,7 +12,7 @@ class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
   RouterNotifier(this._ref) {
-    _ref.listen<String?>(
+    _ref.listen<UserState>(
       userIdProvider,
       (_, __) => notifyListeners(),
     );
@@ -23,16 +23,16 @@ class RouterNotifier extends ChangeNotifier {
   }
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
-    final userId = _ref.read(userIdProvider);
-    final userIdNotifier = _ref.read(userIdProvider.notifier);
+
+    final userState = _ref.read(userIdProvider);
     final usageState = _ref.read(usageProvider);
 
-    if ((userId == null && userIdNotifier.isLoading) ||
-        (userId == null && usageState.isLoading)) {
+    if ((userState.userId == null && userState.isLoading) ||
+        (userState.userId == null && usageState.isLoading)) {
       return '/splash';
     }
 
-    if (userId == null) {
+    if (userState.userId == null) {
       return '/login';
     }
 

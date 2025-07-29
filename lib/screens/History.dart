@@ -139,7 +139,9 @@ class HistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userId = ref.watch(userIdProvider);
+
+    final userState = ref.watch(userIdProvider);
+    final userId = userState.userId;
 
     return Scaffold(
       backgroundColor: AppTheme.background,

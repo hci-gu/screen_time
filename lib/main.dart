@@ -19,11 +19,12 @@ class MyApp extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userId = ref.watch(userIdProvider);
+
+    final userState = ref.watch(userIdProvider);
     final router = ref.watch(
       routerProvider(
         RouterProps(
-          loggedIn: userId != null,
+          loggedIn: userState.userId != null,
         ),
       ),
     );

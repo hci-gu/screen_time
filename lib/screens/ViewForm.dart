@@ -258,15 +258,19 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
   }
 
   Widget _buildEditView() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      children: _questionnaire!.questions.map((question) {
-        return QuestionWidget(
-          question: question,
-          onAnswered: _onAnswered,
-          answers: _editAnswers,
-        );
-      }).toList(),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        children: _questionnaire!.questions.map((question) {
+          return QuestionWidget(
+            question: question,
+            onAnswered: _onAnswered,
+            answers: _editAnswers,
+          );
+        }).toList(),
+      ),
     );
   }
 

@@ -17,7 +17,9 @@ class HomePage extends ConsumerWidget {
     final textTheme = theme.textTheme;
     final usageNotifier = ref.read(usageProvider.notifier);
     final usageState = ref.watch(usageProvider);
-    final userId = ref.watch(userIdProvider);
+    final userState = ref.watch(userIdProvider);
+    final userId = userState.userId;
+    final isAndroid = usageNotifier.isAndroid;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -116,53 +118,55 @@ class HomePage extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.cloud_upload, color: AppTheme.primary),
-                  label: const Text(
-                    'Ladda upp skärmtid (7 dagar)',
-                    style: TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                if (isAndroid) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.cloud_upload, color: AppTheme.primary),
+                    label: const Text(
+                      'Ladda upp skärmtid (7 dagar)',
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.cardBorder,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.cardBorder,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
+                    onPressed: () async {
+                      await usageNotifier.checkUsageStatsPermission();
+                      final refreshedUsageState = ref.read(usageProvider);
+                      if (!refreshedUsageState.hasPermission) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const UsagePage()),
+                        );
+                        return;
+                      }
+                      if (userId != null && userId.isNotEmpty) {
+                        final success =
+                            await usageNotifier.uploadLast7Days(userId);
+                        final snackBar = SnackBar(
+                          content: Text(success
+                              ? 'Uppladdning lyckades!'
+                              : 'Uppladdning misslyckades.'),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Ingen användar-ID hittades.')),
+                        );
+                      }
+                    },
                   ),
-                  onPressed: () async {
-                    await usageNotifier.checkUsageStatsPermission();
-                    final refreshedUsageState = ref.read(usageProvider);
-                    if (!refreshedUsageState.hasPermission) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const UsagePage()),
-                      );
-                      return;
-                    }
-                    if (userId != null && userId.isNotEmpty) {
-                      final success =
-                          await usageNotifier.uploadLast7Days(userId);
-                      final snackBar = SnackBar(
-                        content: Text(success
-                            ? 'Uppladdning lyckades!'
-                            : 'Uppladdning misslyckades.'),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Ingen användar-ID hittades.')),
-                      );
-                    }
-                  },
-                ),
+                ],
               ],
             ),
           ),

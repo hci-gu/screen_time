@@ -9,9 +9,9 @@ class UploadButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usageNotifier = ref.read(usageProvider.notifier);
-    final userId = ref.watch(userIdProvider);
+    final userState = ref.watch(userIdProvider);
     return FloatingActionButton(
-      onPressed: () => usageNotifier.uploadData(userId ?? ''),
+      onPressed: () => usageNotifier.uploadData(userState.userId ?? ''),
       tooltip: 'Upload Data',
       child: const Icon(Icons.cloud_upload),
     );
