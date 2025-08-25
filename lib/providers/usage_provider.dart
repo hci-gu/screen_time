@@ -153,17 +153,19 @@ class UsageNotifier extends StateNotifier<UsageState> {
   }
 
   Future<bool> uploadData(String userId) async {
-    if (!isAndroid) {
-      bool success = await api.uploadData(userId, {'screenTimeEntries': []});
-      return success;
-    }
-
     try {
-      print("uploadData.before Screentime.getUsageStats");
-      final Map<String, int> entries = await Screentime().getUsageStats(
-        state.date,
-      );
-      print("uploadData.after Screentime.getUsageStats: $entries");
+      Map<String, int> entries;
+      
+      if (!isAndroid) {
+        // For iOS, use the data from state (which contains mock data)
+        entries = state.usageData;
+        print("uploadData.iOS using state data: $entries");
+      } else {
+        print("uploadData.before Screentime.getUsageStats");
+        entries = await Screentime().getUsageStats(state.date);
+        print("uploadData.after Screentime.getUsageStats: $entries");
+      }
+      
       // convert to list of maps
       final List<Map<String, dynamic>> entriesList = [];
       entries.forEach((key, value) {
@@ -195,25 +197,69 @@ class UsageNotifier extends StateNotifier<UsageState> {
       print('Permission not granted, aborting upload.');
       return false;
     }
-    if (!isAndroid) {
-      bool success = await api.uploadData(userId, {'screenTimeEntries': []});
-      return success;
-    }
+    
     try {
       final List<Map<String, dynamic>> allEntries = [];
-      for (int i = 1; i <= 7; i++) {
-        final date = DateTime.now().subtract(Duration(days: i));
-        final dateString =
-            "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-        final Map<String, int> entries =
-            await Screentime().getUsageStats(dateString);
-        entries.forEach((key, value) {
-          allEntries.add({
-            'date': dateString,
-            'hour': key,
-            'seconds': value,
+      
+      if (!isAndroid) {
+        // For iOS, generate mock data for the last 7 days
+        for (int i = 1; i <= 7; i++) {
+          final date = DateTime.now().subtract(Duration(days: i));
+          final dateString =
+              "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+          
+          // Use similar mock data as in getUsageStats but vary it slightly for each day
+          final mockData = {
+            "0": (1 + i) * 60,
+            "1": (2 + i) * 60,
+            "2": (30 + i) * 60,
+            "3": (4 + i) * 60,
+            "4": (33 + i) * 60,
+            "5": (6 + i) * 60,
+            "6": (7 + i) * 60,
+            "7": (8 + i) * 60,
+            "8": (9 + i) * 60,
+            "9": (10 + i) * 60,
+            "10": (11 + i) * 60,
+            "11": (12 + i) * 60,
+            "12": (13 + i) * 60,
+            "13": (14 + i) * 60,
+            "14": (15 + i) * 60,
+            "15": (16 + i) * 60,
+            "16": (17 + i) * 60,
+            "17": (18 + i) * 60,
+            "18": (19 + i) * 60,
+            "19": (20 + i) * 60,
+            "20": (21 + i) * 60,
+            "21": (22 + i) * 60,
+            "22": (23 + i) * 60,
+            "23": (24 + i) * 60,
+          };
+          
+          mockData.forEach((key, value) {
+            allEntries.add({
+              'date': dateString,
+              'hour': key,
+              'seconds': value,
+            });
           });
-        });
+        }
+      } else {
+        // For Android, use real screen time data
+        for (int i = 1; i <= 7; i++) {
+          final date = DateTime.now().subtract(Duration(days: i));
+          final dateString =
+              "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+          final Map<String, int> entries =
+              await Screentime().getUsageStats(dateString);
+          entries.forEach((key, value) {
+            allEntries.add({
+              'date': dateString,
+              'hour': key,
+              'seconds': value,
+            });
+          });
+        }
       }
 
       final Map<String, dynamic> result = {
