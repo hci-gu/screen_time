@@ -23,7 +23,6 @@ class RouterNotifier extends ChangeNotifier {
   }
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
-
     final userState = _ref.read(userIdProvider);
     final usageState = _ref.read(usageProvider);
 
@@ -31,21 +30,25 @@ class RouterNotifier extends ChangeNotifier {
         (userState.userId == null && usageState.isLoading)) {
       return '/splash';
     }
-
-    if (userState.userId == null) {
-      return '/login';
-    }
-
+    // Om medgivande saknas på Android, visa UsagePage först
     if (!usageState.hasPermission) {
       if (state.uri.toString() != '/usage') {
         return '/usage';
       }
       return null;
     }
-
+    // Om ej inloggad, visa login (men bara om medgivande redan finns)
+    if (userState.userId == null) {
+      if (usageState.hasPermission && state.uri.toString() != '/login') {
+        return '/login';
+      }
+      return null;
+    }
+    // Om på login/usage och allt är klart, gå till startsidan
     if ((state.uri.toString() == '/login' ||
             state.uri.toString() == '/usage') &&
-        usageState.hasPermission) {
+        usageState.hasPermission &&
+        userState.userId != null) {
       return '/';
     }
     return null;

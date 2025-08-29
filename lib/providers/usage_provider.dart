@@ -1,12 +1,10 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:screen_time/api.dart' as api;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screentime/screentime.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'dart:io';
 
 final usageProvider =
@@ -39,6 +37,32 @@ class UsageState {
 }
 
 class UsageNotifier extends StateNotifier<UsageState> {
+  // Spara dagens skärmtid till localstorage
+  Future<void> saveTodayUsageToLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final date = state.date;
+    final usage = state.usageData;
+    final raw = prefs.getString('screenTimeLocal') ?? '{}';
+    final Map<String, dynamic> allData = jsonDecode(raw);
+    allData[date] = usage;
+    await prefs.setString('screenTimeLocal', jsonEncode(allData));
+  }
+
+  // Hämta all sparad skärmtid från localstorage
+  Future<Map<String, Map<String, int>>> getAllLocalUsage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('screenTimeLocal') ?? '{}';
+    final Map<String, dynamic> allData = jsonDecode(raw);
+    return allData
+        .map((date, usage) => MapEntry(date, Map<String, int>.from(usage)));
+  }
+
+  // Rensa all sparad skärmtid från localstorage
+  Future<void> clearLocalUsage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('screenTimeLocal');
+  }
+
   bool get isAndroid => Platform.isAndroid;
   DateTime lastUpdate = DateTime(1900, 1, 1);
 
@@ -142,6 +166,8 @@ class UsageNotifier extends StateNotifier<UsageState> {
       final Map<String, int> result =
           await Screentime().getUsageStats(state.date);
       state = state.copyWith(usageData: result);
+      // Spara till localstorage varje gång ny data hämtas
+      await saveTodayUsageToLocal();
     } on PlatformException catch (e) {
       print("getUsageStats error: ${e.message}");
     }
@@ -200,34 +226,30 @@ class UsageNotifier extends StateNotifier<UsageState> {
       return success;
     }
     try {
-      final List<Map<String, dynamic>> allEntries = [];
-      for (int i = 1; i <= 7; i++) {
-        final date = DateTime.now().subtract(Duration(days: i));
-        final dateString =
-            "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-        final Map<String, int> entries =
-            await Screentime().getUsageStats(dateString);
-        entries.forEach((key, value) {
-          allEntries.add({
-            'date': dateString,
-            'hour': key,
-            'seconds': value,
+      // Hämta all sparad skärmtid från localstorage
+      final allData = await getAllLocalUsage();
+      final List<Map<String, dynamic>> entriesList = [];
+      allData.forEach((date, usage) {
+        usage.forEach((hour, seconds) {
+          entriesList.add({
+            'date': date,
+            'hour': hour,
+            'seconds': seconds,
           });
         });
-      }
-
+      });
       final Map<String, dynamic> result = {
-        'screenTimeEntries': allEntries,
+        'screenTimeEntries': entriesList,
       };
-
       bool success = await api.uploadData(userId, result);
-
       if (success) {
+        await clearLocalUsage();
         _saveLastUpdate();
         return true;
       }
-    } on PlatformException catch (_) {}
-
+    } catch (e) {
+      print('uploadLast7Days error: $e');
+    }
     return false;
   }
 }

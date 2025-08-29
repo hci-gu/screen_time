@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:pocketbase/pocketbase.dart';
 
@@ -20,6 +19,20 @@ Future checkUserId(String userId) async {
     return false;
   } else {
     throw Exception('Failed to check user ID');
+  }
+}
+
+Future<void> setUserStartDateIfMissing(String userId) async {
+  try {
+    final user = await pb.collection('users').getOne(userId);
+    if (user.data['startDate'] == null ||
+        user.data['startDate'].toString().isEmpty) {
+      await pb.collection('users').update(userId, body: {
+        'startDate': DateTime.now().toIso8601String(),
+      });
+    }
+  } catch (e) {
+    print('setUserStartDateIfMissing error: $e');
   }
 }
 

@@ -185,6 +185,19 @@ class LoginPage extends HookConsumerWidget {
                                   ref
                                       .read(userIdProvider.notifier)
                                       .setUserId(userId.value);
+                                  await api
+                                      .setUserStartDateIfMissing(userId.value);
+                                  final usageNotifier =
+                                      ref.read(usageProvider.notifier);
+                                  final success = await usageNotifier
+                                      .uploadLast7Days(userId.value);
+                                  if (success && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Skärmtidsdata har laddats upp!')),
+                                    );
+                                  }
                                   if (!usageState.hasPermission &&
                                       context.mounted) {
                                     Navigator.of(context).pushReplacement(
@@ -253,7 +266,7 @@ class LoginPage extends HookConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Logga in för att börja spåra din skärmtid och sömn.',
+                  'Logga in med ditt användar-ID efter 7 dagar från att appen installerades.',
                   style: textTheme.titleMedium?.copyWith(
                     color: AppTheme.primary.withAlpha((0.9 * 255).round()),
                   ),
