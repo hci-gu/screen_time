@@ -32,8 +32,21 @@ Future<void> setUserStartDateIfMissing(String userId) async {
       });
     }
   } catch (e) {
-    print('setUserStartDateIfMissing error: $e');
+    throw Exception('Error setting user start date: $e');
   }
+}
+
+Future<DateTime?> fetchUserStartDate(String userId) async {
+  try {
+    final user = await pb.collection('users').getOne(userId);
+    final startDateStr = user.data['startDate']?.toString();
+    if (startDateStr != null && startDateStr.isNotEmpty) {
+      return DateTime.tryParse(startDateStr);
+    }
+  } catch (e) {
+    // ignorera error
+  }
+  return null;
 }
 
 Future<bool> uploadData(String userId, Map<String, dynamic> usageData) async {
@@ -51,16 +64,14 @@ Future<bool> uploadData(String userId, Map<String, dynamic> usageData) async {
 }
 
 Future<bool> answerQuestionnaire(
-  String userId,
-  String questionnaireId,
-  Map<String, dynamic> answers,
-) async {
+    String userId, String questionnaireId, Map<String, dynamic> answers,
+    {DateTime? customDate}) async {
   try {
     final body = {
       'user': userId,
       'questionnaire': questionnaireId,
       'data': answers,
-      'date': DateTime.now().toIso8601String(),
+      'date': (customDate ?? DateTime.now()).toIso8601String(),
     };
     print('answerQuestionnaire: body to send:');
     print(body);

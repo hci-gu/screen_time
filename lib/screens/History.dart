@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../api.dart';
 import '../providers/user_provider.dart';
 import 'ViewForm.dart';
+import 'Entry.dart';
 
 class HistoryPage extends ConsumerWidget {
   const HistoryPage({super.key});
@@ -123,8 +124,10 @@ class HistoryPage extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle.isNotEmpty ? subtitle : 'Tid okänd',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: AppTheme.cardBorder),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -139,7 +142,6 @@ class HistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
     final userState = ref.watch(userIdProvider);
     final userId = userState.userId;
 
@@ -154,36 +156,134 @@ class HistoryPage extends ConsumerWidget {
       ),
       body: userId == null || userId.isEmpty
           ? const Center(child: Text('Ingen användare inloggad.'))
-          : FutureBuilder<List<Map<String, dynamic>>>(
-              future: fetchUserAnswers(userId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+          : FutureBuilder<DateTime?>(
+              future: fetchUserStartDate(userId),
+              builder: (context, startSnapshot) {
+                if (startSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError) {
-                  return _buildErrorState(context, snapshot.error.toString());
-                }
+                final startDate = startSnapshot.data;
+                return FutureBuilder<List<Map<String, dynamic>>>(
+                  future: fetchUserAnswers(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return _buildErrorState(
+                          context, snapshot.error.toString());
+                    }
 
-                final entries = snapshot.data ?? [];
-                if (entries.isEmpty) {
-                  return _buildEmptyState(context, userId);
-                }
+                    final entries = snapshot.data ?? [];
+                    if (entries.isEmpty) {
+                      return _buildEmptyState(context, userId);
+                    }
 
-                entries.sort((a, b) {
-                  final dateA = DateTime.tryParse(
-                      (a['date'] ?? a['created'] ?? '').replaceFirst(' ', 'T'));
-                  final dateB = DateTime.tryParse(
-                      (b['date'] ?? b['created'] ?? '').replaceFirst(' ', 'T'));
-                  if (dateA == null || dateB == null) return 0;
-                  return dateB.compareTo(dateA);
-                });
+                    // Find all filled days
+                    List<Map<String, dynamic>> afterStart = [];
+                    Set<String> filledDays = {};
+                    for (final entry in entries) {
+                      final dateStr = (entry['date'] ?? entry['created'] ?? '')
+                          .replaceFirst(' ', 'T');
+                      final date = DateTime.tryParse(dateStr);
+                      if (startDate != null &&
+                          date != null &&
+                          !date.isBefore(startDate)) {
+                        final start = DateTime(
+                            startDate.year, startDate.month, startDate.day);
+                        final entryDay =
+                            DateTime(date.year, date.month, date.day);
+                        final dayNumber = entryDay.difference(start).inDays + 1;
+                        afterStart.add({...entry, 'dayNumber': dayNumber});
+                        filledDays.add(
+                            "${entryDay.year}-${entryDay.month.toString().padLeft(2, '0')}-${entryDay.day.toString().padLeft(2, '0')}");
+                      }
+                    }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                  itemCount: entries.length,
-                  itemBuilder: (context, index) {
-                    final entry = entries[index];
-                    return _buildEntryCard(context, entry);
+                    List<Widget> allDayWidgets = [];
+                    if (startDate != null) {
+                      final today = DateTime.now();
+                      final start = DateTime(
+                          startDate.year, startDate.month, startDate.day);
+                      final totalDays = today.difference(start).inDays + 1;
+
+                      Map<int, Map<String, dynamic>> entryByDayNumber = {};
+                      for (final entry in afterStart) {
+                        final dayNumber = entry['dayNumber'] as int?;
+                        if (dayNumber != null) {
+                          entryByDayNumber[dayNumber] = entry;
+                        }
+                      }
+
+                      for (int i = 0; i < totalDays; i++) {
+                        final day = start.add(Duration(days: i));
+                        final dayNumber = i + 1;
+
+                        if (entryByDayNumber.containsKey(dayNumber)) {
+                          final entry = entryByDayNumber[dayNumber]!;
+                          allDayWidgets.add(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0, vertical: 4.0),
+                                  child: Text('Dag $dayNumber',
+                                      style:
+                                          TextStyle(color: AppTheme.primary)),
+                                ),
+                                _buildEntryCard(context, entry),
+                              ],
+                            ),
+                          );
+                        } else {
+                          allDayWidgets.add(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0, vertical: 4.0),
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.add,
+                                    color: AppTheme.primary),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.cardBorder,
+                                  foregroundColor: AppTheme.primary,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 16),
+                                ),
+                                label: Text(
+                                    'Fyll i dagbok för dag $dayNumber (${DateFormat('d MMM yyyy').format(day)})'),
+                                onPressed: () async {
+                                  // Fetch questionnaire
+                                  final questionnaires =
+                                      await fetchQuestionnaires();
+                                  final questionnaire =
+                                      questionnaires.isNotEmpty
+                                          ? questionnaires.first
+                                          : null;
+                                  if (questionnaire != null &&
+                                      context.mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => NewEntryPage(
+                                          questionnaire: questionnaire,
+                                          initialDate: day,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    }
+
+                    return ListView(
+                      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                      children: allDayWidgets,
+                    );
                   },
                 );
               },

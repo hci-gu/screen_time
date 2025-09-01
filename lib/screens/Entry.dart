@@ -8,10 +8,12 @@ import '../widgets/question_widget.dart';
 
 class NewEntryPage extends ConsumerStatefulWidget {
   final Questionnaire questionnaire;
+  final DateTime? initialDate;
 
   const NewEntryPage({
     super.key,
     required this.questionnaire,
+    this.initialDate,
   });
 
   @override
@@ -21,6 +23,52 @@ class NewEntryPage extends ConsumerStatefulWidget {
 class _NewEntryPageState extends ConsumerState<NewEntryPage> {
   final Map<String, dynamic> _answers = {};
   bool _showLastDayQuestions = false;
+  DateTime? _userStartDate;
+  bool _checkingStartDate = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStartDateCheck();
+    if (widget.initialDate != null) {
+      final dateQuestion = widget.questionnaire.questions.firstWhere(
+        (q) => q.type == 'date' || q.name.toLowerCase().contains('date'),
+        orElse: () => Question(
+          id: '',
+          name: '',
+          text: '',
+          type: '',
+          showWhenParentIs: null,
+          options: [],
+          subQuestions: [],
+          lastDay: false,
+        ),
+      );
+      if (dateQuestion.id.isNotEmpty) {
+        _answers[dateQuestion.id] = widget.initialDate!.toIso8601String();
+      }
+    }
+  }
+
+  Future<void> _initStartDateCheck() async {
+    final userState = ref.read(userIdProvider);
+    final userId = userState.userId;
+    if (userId != null && userId.isNotEmpty) {
+      _userStartDate = await fetchUserStartDate(userId);
+    }
+    if (_userStartDate != null) {
+      final now = DateTime.now();
+      final diff = now.difference(_userStartDate!);
+      if (diff.inDays < 10) {
+        setState(() {
+          _showLastDayQuestions = true;
+        });
+      }
+    }
+    setState(() {
+      _checkingStartDate = false;
+    });
+  }
 
   void _onAnswered(String questionId, dynamic value) {
     setState(() {
@@ -74,7 +122,6 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
   }
 
   Future<void> _submitForm() async {
-
     final userState = ref.read(userIdProvider);
     final userId = userState.userId;
     if (userId == null || userId.isEmpty) {
@@ -129,23 +176,6 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
     return filtered;
   }
 
-  bool get _hasLastDayQuestions {
-    bool found = false;
-    void check(List<Question> questions) {
-      if (found) return;
-      for (final q in questions) {
-        if (q.lastDay) {
-          found = true;
-          return;
-        }
-        check(q.subQuestions);
-      }
-    }
-
-    check(widget.questionnaire.questions);
-    return found;
-  }
-
   @override
   Widget build(BuildContext context) {
     final visibleQuestions = _showLastDayQuestions
@@ -166,63 +196,40 @@ class _NewEntryPageState extends ConsumerState<NewEntryPage> {
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: visibleQuestions.length +
-                (_hasLastDayQuestions && !_showLastDayQuestions ? 3 : 2),
-            itemBuilder: (context, index) {
-              if (index < visibleQuestions.length) {
-                final question = visibleQuestions[index];
-                return QuestionWidget(
-                  question: question,
-                  onAnswered: _onAnswered,
-                  answers: _answers,
-                );
-              } else if (_hasLastDayQuestions &&
-                  !_showLastDayQuestions &&
-                  index == visibleQuestions.length) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.lock_open, color: AppTheme.primary),
-                    label: const Text('Visa frågor för sista dagen',
-                        style: TextStyle(color: AppTheme.primary)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          AppTheme.accent.withAlpha((0.15 * 255).round()),
-                      foregroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      textStyle:
-                          const TextStyle(fontSize: 16, color: AppTheme.primary),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showLastDayQuestions = true;
-                      });
-                    },
-                  ),
-                );
-              } else if (index ==
-                  visibleQuestions.length +
-                      (_hasLastDayQuestions && !_showLastDayQuestions ? 1 : 0)) {
-                return const SizedBox(height: 24);
-              } else {
-                return ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: AppTheme.background,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    textStyle:
-                        const TextStyle(fontSize: 16, color: AppTheme.background),
-                    elevation: 0,
-                  ),
-                  child: const Text('Skicka'),
-                );
-              }
-            },
-          ),
+          child: _checkingStartDate
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: visibleQuestions.length + 2,
+                  itemBuilder: (context, index) {
+                    if (index < visibleQuestions.length) {
+                      final question = visibleQuestions[index];
+                      return QuestionWidget(
+                        question: question,
+                        onAnswered: _onAnswered,
+                        answers: _answers,
+                      );
+                    } else if (index == visibleQuestions.length) {
+                      // Visa ingenting om sistadagsfrågorna är låsta
+                      return const SizedBox.shrink();
+                    } else if (index == visibleQuestions.length + 1) {
+                      return ElevatedButton(
+                        onPressed: _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: AppTheme.background,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          textStyle: const TextStyle(
+                              fontSize: 16, color: AppTheme.background),
+                          elevation: 0,
+                        ),
+                        child: const Text('Skicka'),
+                      );
+                    } else {
+                      return const SizedBox.shrink();
+                    }
+                  },
+                ),
         ),
       ),
     );
