@@ -6,6 +6,7 @@ import 'package:screen_time/router.dart';
 import 'package:screen_time/theme/app_theme.dart';
 import 'package:screen_time/services/foreground_service.dart';
 import 'providers/user_provider.dart';
+import 'providers/usage_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,6 @@ class MyApp extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
     final userState = ref.watch(userIdProvider);
     final router = ref.watch(
       routerProvider(
@@ -29,11 +29,40 @@ class MyApp extends HookConsumerWidget {
       ),
     );
 
+    WidgetsBinding.instance.addObserver(_AppLifecycleObserver(ref));
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Skärmtidstracker',
       theme: AppTheme.themeData,
       routerConfig: router,
     );
+  }
+}
+
+class _AppLifecycleObserver extends WidgetsBindingObserver {
+  final WidgetRef _ref;
+
+  _AppLifecycleObserver(this._ref);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      _triggerAutoUpload();
+    }
+  }
+
+  void _triggerAutoUpload() async {
+    try {
+      final userState = _ref.read(userIdProvider);
+      if (userState.userId != null) {
+        final usageNotifier = _ref.read(usageProvider.notifier);
+        await usageNotifier.autoUploadIfNeeded(userState.userId!);
+      }
+    } catch (e) {
+      print('App lifecycle auto-upload failed: $e');
+    }
   }
 }

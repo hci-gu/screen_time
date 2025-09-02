@@ -7,6 +7,7 @@ import 'package:screen_time/services/foreground_service.dart';
 import 'package:screen_time/theme/app_theme.dart';
 import 'package:screen_time/widgets/grant_permission_view.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io';
 
 class UsagePage extends HookConsumerWidget {
   const UsagePage({super.key});
@@ -23,6 +24,21 @@ class UsagePage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!Platform.isAndroid) {
+      useEffect(() {
+        Future.microtask(() {
+          context.go('/');
+        });
+        return null;
+      }, []);
+
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final usageState = ref.watch(usageProvider);
 
     useEffect(() {

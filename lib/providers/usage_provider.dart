@@ -70,11 +70,13 @@ class UsageNotifier extends StateNotifier<UsageState> {
       : super(UsageState(
           date: _currentDate(),
           usageData: {},
-          hasPermission: !Platform.isAndroid, // auto-true if non-android
-          isLoading: Platform.isAndroid, // loading only on Android
+          hasPermission: Platform.isAndroid,
+          isLoading: Platform.isAndroid,
         )) {
-    checkUsageStatsPermission();
-    _loadLastUpdate();
+    if (Platform.isAndroid) {
+      checkUsageStatsPermission();
+      _loadLastUpdate();
+    }
   }
 
   Future<void> _loadLastUpdate() async {
@@ -102,9 +104,8 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
   Future<void> checkUsageStatsPermission() async {
     if (!isAndroid) {
-      // on non-android, assume permission granted and load mock data
-      state = state.copyWith(hasPermission: true, isLoading: false);
-      getUsageStats();
+      state =
+          state.copyWith(hasPermission: false, isLoading: false, usageData: {});
       return;
     }
     try {
@@ -120,6 +121,9 @@ class UsageNotifier extends StateNotifier<UsageState> {
   }
 
   Future<void> requestUsageStatsPermission() async {
+    if (!isAndroid) {
+      return;
+    }
     try {
       await Screentime().requestUsageStatsPermission();
       final bool permitted = await Screentime().hasPermission();
@@ -134,32 +138,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
   Future<void> getUsageStats() async {
     if (!isAndroid) {
-      state = state.copyWith(usageData: {
-        "0": 1 * 60,
-        "1": 2 * 60,
-        "2": 30 * 60,
-        "3": 4 * 60,
-        "4": 33 * 60,
-        "5": 6 * 60,
-        "6": 7 * 60,
-        "7": 8 * 60,
-        "8": 9 * 60,
-        "9": 10 * 60,
-        "10": 11 * 60,
-        "11": 12 * 60,
-        "12": 13 * 60,
-        "13": 14 * 60,
-        "14": 15 * 60,
-        "15": 16 * 60,
-        "16": 17 * 60,
-        "17": 18 * 60,
-        "18": 19 * 60,
-        "19": 20 * 60,
-        "20": 21 * 60,
-        "21": 22 * 60,
-        "22": 23 * 60,
-        "23": 24 * 60,
-      });
+      state = state.copyWith(usageData: {});
       return;
     }
     try {
@@ -180,8 +159,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
   Future<bool> uploadData(String userId) async {
     if (!isAndroid) {
-      bool success = await api.uploadData(userId, {'screenTimeEntries': []});
-      return success;
+      return false;
     }
 
     try {
@@ -190,10 +168,13 @@ class UsageNotifier extends StateNotifier<UsageState> {
         state.date,
       );
       print("uploadData.after Screentime.getUsageStats: $entries");
-      // convert to list of maps
+
+      await saveTodayUsageToLocal();
+
       final List<Map<String, dynamic>> entriesList = [];
       entries.forEach((key, value) {
         entriesList.add({
+          'date': state.date,
           'hour': key,
           'seconds': value,
         });
@@ -216,14 +197,23 @@ class UsageNotifier extends StateNotifier<UsageState> {
     return false;
   }
 
-  Future<bool> uploadLast7Days(String userId) async {
-    if (!state.hasPermission) {
-      print('Permission not granted, aborting upload.');
-      return false;
+  Future<void> autoUploadIfNeeded(String userId) async {
+    final now = DateTime.now();
+    final timeSinceLastUpdate = now.difference(lastUpdate);
+
+    if (timeSinceLastUpdate.inMinutes > 30) {
+      try {
+        await uploadData(userId);
+        print('Auto-upload completed at ${now.toIso8601String()}');
+      } catch (e) {
+        print('Auto-upload failed: $e');
+      }
     }
-    if (!isAndroid) {
-      bool success = await api.uploadData(userId, {'screenTimeEntries': []});
-      return success;
+  }
+
+  Future<bool> uploadLast7Days(String userId) async {
+    if (!isAndroid || !state.hasPermission) {
+      return false;
     }
     try {
       // Hämta all sparad skärmtid från localstorage

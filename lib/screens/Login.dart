@@ -187,17 +187,15 @@ class LoginPage extends HookConsumerWidget {
                                       .setUserId(userId.value);
                                   await api
                                       .setUserStartDateIfMissing(userId.value);
-                                  final usageNotifier =
-                                      ref.read(usageProvider.notifier);
-                                  final success = await usageNotifier
-                                      .uploadLast7Days(userId.value);
-                                  if (success && context.mounted) {
+
+                                  if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content: Text(
-                                              'Skärmtidsdata har laddats upp!')),
+                                              'Inloggad! Skärmtidsdata laddas upp automatiskt.')),
                                     );
                                   }
+
                                   if (!usageState.hasPermission &&
                                       context.mounted) {
                                     Navigator.of(context).pushReplacement(

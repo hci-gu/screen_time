@@ -35,8 +35,10 @@ class ScreentimeServiceHandler extends TaskHandler {
       return;
     }
     try {
-      await notifier.uploadData(userId);
-    } catch (_) {}
+      await notifier.autoUploadIfNeeded(userId);
+    } catch (e) {
+      dev.log("Auto-upload failed in foreground service: $e");
+    }
   }
 
   @override

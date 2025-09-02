@@ -7,6 +7,7 @@ import '../api.dart';
 import 'Entry.dart';
 import 'History.dart';
 import 'Usage.dart';
+import 'ScreentimeView.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -16,9 +17,6 @@ class HomePage extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final usageNotifier = ref.read(usageProvider.notifier);
-    final usageState = ref.watch(usageProvider);
-    final userState = ref.watch(userIdProvider);
-    final userId = userState.userId;
     final isAndroid = usageNotifier.isAndroid;
 
     return Scaffold(
@@ -121,9 +119,10 @@ class HomePage extends ConsumerWidget {
                 if (isAndroid) ...[
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.cloud_upload, color: AppTheme.primary),
+                    icon: const Icon(Icons.phone_android,
+                        color: AppTheme.primary),
                     label: const Text(
-                      'Ladda upp skärmtid (7 dagar)',
+                      'Se skärmtidsdata',
                       style: TextStyle(
                         color: AppTheme.primary,
                         fontWeight: FontWeight.w600,
@@ -142,26 +141,20 @@ class HomePage extends ConsumerWidget {
                       await usageNotifier.checkUsageStatsPermission();
                       final refreshedUsageState = ref.read(usageProvider);
                       if (!refreshedUsageState.hasPermission) {
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const UsagePage()),
+                          );
+                        }
+                        return;
+                      }
+                      if (context.mounted) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const UsagePage()),
-                        );
-                        return;
-                      }
-                      if (userId != null && userId.isNotEmpty) {
-                        final success =
-                            await usageNotifier.uploadLast7Days(userId);
-                        final snackBar = SnackBar(
-                          content: Text(success
-                              ? 'Uppladdning lyckades!'
-                              : 'Uppladdning misslyckades.'),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Ingen användar-ID hittades.')),
+                              builder: (context) => const ScreentimeViewPage()),
                         );
                       }
                     },
@@ -189,51 +182,168 @@ class HomePage extends ConsumerWidget {
             .firstWhere((q) => q.id == 't0f34uiz4jal947', orElse: () {
           return snapshot.data!.first;
         });
-        return Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                Color.fromARGB(255, 91, 192, 190),
-                Color.fromARGB(255, 91, 192, 190)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+
+        return Consumer(
+          builder: (context, ref, child) {
+            final userState = ref.watch(userIdProvider);
+            final userId = userState.userId;
+
+            if (userId == null || userId.isEmpty) {
+              return _buildDefaultHeroCard(context, textTheme, questionnaire);
+            }
+
+            return FutureBuilder<bool>(
+              future: _checkTodayEntryExists(userId),
+              builder: (context, entrySnapshot) {
+                if (entrySnapshot.connectionState == ConnectionState.waiting) {
+                  return _buildDefaultHeroCard(
+                      context, textTheme, questionnaire);
+                }
+
+                final hasEntryToday = entrySnapshot.data ?? false;
+
+                if (hasEntryToday) {
+                  return _buildCompletedHeroCard(context, textTheme);
+                } else {
+                  return _buildDefaultHeroCard(
+                      context, textTheme, questionnaire);
+                }
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<bool> _checkTodayEntryExists(String userId) async {
+    try {
+      final answers = await fetchUserAnswers(userId);
+      final today = DateTime.now();
+      final todayStr =
+          "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+      for (final answer in answers) {
+        final dateStr = (answer['date'] ?? answer['created'] ?? '').toString();
+        if (dateStr.isNotEmpty) {
+          final answerDate = DateTime.tryParse(dateStr.replaceFirst(' ', 'T'));
+          if (answerDate != null) {
+            final answerDateStr =
+                "${answerDate.year}-${answerDate.month.toString().padLeft(2, '0')}-${answerDate.day.toString().padLeft(2, '0')}";
+            if (answerDateStr == todayStr) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Widget _buildCompletedHeroCard(BuildContext context, TextTheme textTheme) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 76, 175, 80),
+            Color.fromARGB(255, 56, 142, 60)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.check_circle,
+              size: 120,
+              color: Colors.white.withValues(alpha: 0.15),
             ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
           ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -20,
-                bottom: -20,
-                child: Icon(
-                  Icons.nightlight_round,
-                  size: 120,
-                  color: Colors.white.withValues(alpha: 0.10),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bra jobbat!',
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'God morgon!',
-                      style: textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Dags att logga nattens sömn.',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: AppTheme.primary.withAlpha((0.9 * 255).round()),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    OutlinedButton.icon(
+                const SizedBox(height: 8),
+                Text(
+                  'Du har redan fyllt i dagens dagbok.',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultHeroCard(
+      BuildContext context, TextTheme textTheme, Questionnaire questionnaire) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 91, 192, 190),
+            Color.fromARGB(255, 91, 192, 190)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.nightlight_round,
+              size: 120,
+              color: Colors.white.withValues(alpha: 0.10),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'God morgon!',
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Dags att logga nattens sömn.',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppTheme.primary.withAlpha((0.9 * 255).round()),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Consumer(
+                  builder: (context, ref, child) {
+                    return OutlinedButton.icon(
                       icon: const Icon(Icons.add, color: AppTheme.primary),
                       label: const Text('Fyll i dagbok',
                           style: TextStyle(color: AppTheme.primary)),
@@ -249,22 +359,26 @@ class HomePage extends ConsumerWidget {
                         textStyle: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600),
                       ),
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final result = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                               builder: (context) =>
                                   NewEntryPage(questionnaire: questionnaire)),
                         );
+
+                        if (result == true && context.mounted) {
+                          ref.invalidate(userIdProvider);
+                        }
                       },
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

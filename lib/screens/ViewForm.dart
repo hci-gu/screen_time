@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:screen_time/theme/app_theme.dart';
 import '../api.dart';
+import '../providers/user_provider.dart';
 import '../widgets/question_widget.dart';
 
 class EntryDetailPage extends ConsumerStatefulWidget {
@@ -113,6 +114,45 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
     return searchInQuestions(_questionnaire!.questions);
   }
 
+  Future<String> _getDayNumber() async {
+    try {
+      final existingDayNumber = widget.entry['dayNumber'];
+      if (existingDayNumber != null) {
+        return 'Dag $existingDayNumber';
+      }
+
+      final userState = ref.read(userIdProvider);
+      final userId = userState.userId;
+      if (userId == null || userId.isEmpty) {
+        return 'Okänt datum';
+      }
+
+      final startDate = await fetchUserStartDate(userId);
+      if (startDate == null) {
+        return 'Okänt datum';
+      }
+
+      final entryDateStr =
+          (widget.entry['date'] ?? widget.entry['created'])?.toString();
+      if (entryDateStr == null || entryDateStr.isEmpty) {
+        return 'Okänt datum';
+      }
+
+      final entryDate = DateTime.tryParse(entryDateStr.replaceFirst(' ', 'T'));
+      if (entryDate == null) {
+        return 'Okänt datum';
+      }
+
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      final entryDay = DateTime(entryDate.year, entryDate.month, entryDate.day);
+      final dayNumber = entryDay.difference(start).inDays + 1;
+
+      return 'Dag $dayNumber';
+    } catch (e) {
+      return 'Okänt datum';
+    }
+  }
+
   Future<void> _saveChanges() async {
     final answerId = widget.entry['id'];
     if (answerId == null) {
@@ -174,7 +214,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
         actions: _editing
             ? [
                 IconButton(
-                  icon: const Icon(Icons.cancel_outlined),
+                  icon: const Icon(Icons.close),
                   tooltip: 'Avbryt',
                   onPressed: () {
                     setState(() {
@@ -185,7 +225,7 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.save_alt_outlined),
+                  icon: const Icon(Icons.check),
                   tooltip: 'Spara',
                   onPressed: _saveChanges,
                 ),
@@ -237,20 +277,26 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
       children: [
-        Card(
-          elevation: 2,
-          shadowColor: AppTheme.primary.withAlpha((0.1 * 255).round()),
-          margin: const EdgeInsets.only(bottom: 24),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ListTile(
-            leading: const Icon(Icons.calendar_today_outlined,
-                color: AppTheme.primary),
-            title: const Text('Ifyllt datum',
-                style: TextStyle(
-                    fontWeight: FontWeight.w500, color: AppTheme.primary)),
-            subtitle: Text(date ?? 'Okänt datum'),
-          ),
+        FutureBuilder<String>(
+          future: _getDayNumber(),
+          builder: (context, snapshot) {
+            final dayText = snapshot.data ?? 'Laddar...';
+            return Card(
+              elevation: 2,
+              shadowColor: AppTheme.primary.withAlpha((0.1 * 255).round()),
+              margin: const EdgeInsets.only(bottom: 24),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: ListTile(
+                leading: const Icon(Icons.calendar_today_outlined,
+                    color: AppTheme.primary),
+                title: const Text('Dagboksinlägg',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500, color: AppTheme.primary)),
+                subtitle: Text(dayText),
+              ),
+            );
+          },
         ),
         ..._buildRecursiveAnswerDisplay(_questionnaire!.questions),
       ],

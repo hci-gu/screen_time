@@ -198,6 +198,15 @@ class Question {
     final options =
         optionsData.map((data) => AnswerOption.fromJson(data)).toList();
 
+    options.sort((a, b) {
+      if (a.valueNumber != null && b.valueNumber != null) {
+        return a.valueNumber!.compareTo(b.valueNumber!);
+      }
+      if (a.valueNumber == null && b.valueNumber != null) return 1;
+      if (a.valueNumber != null && b.valueNumber == null) return -1;
+      return a.id.compareTo(b.id);
+    });
+
     final subQuestionsData = expand['subQuestions'] as List<dynamic>? ?? [];
     final subQuestions =
         subQuestionsData.map((data) => Question.fromJson(data)).toList();

@@ -243,18 +243,23 @@ class _QuestionWidgetState extends State<QuestionWidget> {
         );
 
       case 'slider':
-        final double currentValue =
-            (widget.answers[widget.question.id] as num? ?? 1.0).toDouble();
+        final bool hasAnswer = widget.answers[widget.question.id] != null;
+        final double currentValue = hasAnswer
+            ? (widget.answers[widget.question.id] as num).toDouble()
+            : 1.0;
         final int divisions = widget.question.options.length > 1
             ? widget.question.options.length - 1
             : 1;
-        String currentLabel = widget.question.options.first.displayText;
-        if (widget.answers[widget.question.id] != null) {
-          final index = (widget.answers[widget.question.id] as num).round() - 1;
-          if (index >= 0 && index < widget.question.options.length) {
-            currentLabel = widget.question.options[index].displayText;
-          }
-        }
+        String currentLabel = hasAnswer
+            ? (() {
+                final index =
+                    (widget.answers[widget.question.id] as num).round() - 1;
+                if (index >= 0 && index < widget.question.options.length) {
+                  return widget.question.options[index].displayText;
+                }
+                return 'Välj ett alternativ';
+              })()
+            : 'Välj ett alternativ';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,10 +268,18 @@ class _QuestionWidgetState extends State<QuestionWidget> {
             AppTheme.spacer,
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: accentColor,
-                inactiveTrackColor: accentColor.withAlpha((0.3 * 255).round()),
-                thumbColor: accentColor,
-                overlayColor: accentColor.withAlpha((0.2 * 255).round()),
+                activeTrackColor: hasAnswer
+                    ? accentColor
+                    : accentColor.withAlpha((0.4 * 255).round()),
+                inactiveTrackColor: hasAnswer
+                    ? accentColor.withAlpha((0.3 * 255).round())
+                    : accentColor.withAlpha((0.2 * 255).round()),
+                thumbColor: hasAnswer
+                    ? accentColor
+                    : accentColor.withAlpha((0.6 * 255).round()),
+                overlayColor: hasAnswer
+                    ? accentColor.withAlpha((0.2 * 255).round())
+                    : accentColor.withAlpha((0.15 * 255).round()),
                 valueIndicatorColor: primaryTextColor,
                 valueIndicatorTextStyle: const TextStyle(color: Colors.white),
               ),
@@ -284,8 +297,11 @@ class _QuestionWidgetState extends State<QuestionWidget> {
               child: Text(
                 currentLabel,
                 style: AppTheme.body.copyWith(
-                    color: primaryTextColor.withAlpha((0.8 * 255).round()),
-                    fontWeight: FontWeight.bold),
+                    color: hasAnswer
+                        ? primaryTextColor.withAlpha((0.8 * 255).round())
+                        : primaryTextColor.withAlpha((0.6 * 255).round()),
+                    fontWeight: hasAnswer ? FontWeight.bold : FontWeight.w500,
+                    fontStyle: hasAnswer ? FontStyle.normal : FontStyle.italic),
               ),
             ),
           ],

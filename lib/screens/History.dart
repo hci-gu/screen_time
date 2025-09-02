@@ -7,8 +7,15 @@ import '../providers/user_provider.dart';
 import 'ViewForm.dart';
 import 'Entry.dart';
 
-class HistoryPage extends ConsumerWidget {
+class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({super.key});
+
+  @override
+  ConsumerState<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends ConsumerState<HistoryPage> {
+  int _refreshKey = 0;
 
   (String, String) _parseAndFormatDateTime(String? dateTimeString) {
     if (dateTimeString == null || dateTimeString.isEmpty) {
@@ -122,13 +129,6 @@ class HistoryPage extends ConsumerWidget {
                           fontWeight: FontWeight.bold, color: AppTheme.primary),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle.isNotEmpty ? subtitle : 'Tid okänd',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -141,7 +141,7 @@ class HistoryPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final userState = ref.watch(userIdProvider);
     final userId = userState.userId;
 
@@ -157,6 +157,7 @@ class HistoryPage extends ConsumerWidget {
       body: userId == null || userId.isEmpty
           ? const Center(child: Text('Ingen användare inloggad.'))
           : FutureBuilder<DateTime?>(
+              key: ValueKey(_refreshKey),
               future: fetchUserStartDate(userId),
               builder: (context, startSnapshot) {
                 if (startSnapshot.connectionState == ConnectionState.waiting) {
@@ -179,7 +180,6 @@ class HistoryPage extends ConsumerWidget {
                       return _buildEmptyState(context, userId);
                     }
 
-                    // Find all filled days
                     List<Map<String, dynamic>> afterStart = [];
                     Set<String> filledDays = {};
                     for (final entry in entries) {
@@ -254,7 +254,6 @@ class HistoryPage extends ConsumerWidget {
                                 label: Text(
                                     'Fyll i dagbok för dag $dayNumber (${DateFormat('d MMM yyyy').format(day)})'),
                                 onPressed: () async {
-                                  // Fetch questionnaire
                                   final questionnaires =
                                       await fetchQuestionnaires();
                                   final questionnaire =
@@ -263,14 +262,22 @@ class HistoryPage extends ConsumerWidget {
                                           : null;
                                   if (questionnaire != null &&
                                       context.mounted) {
-                                    Navigator.of(context).push(
+                                    final result =
+                                        await Navigator.of(context).push<bool>(
                                       MaterialPageRoute(
                                         builder: (_) => NewEntryPage(
                                           questionnaire: questionnaire,
                                           initialDate: day,
+                                          dayNumber: dayNumber,
                                         ),
                                       ),
                                     );
+
+                                    if (result == true && mounted) {
+                                      setState(() {
+                                        _refreshKey++;
+                                      });
+                                    }
                                   }
                                 },
                               ),

@@ -7,6 +7,7 @@ import 'package:screen_time/screens/Login.dart';
 import 'package:screen_time/screens/Usage.dart';
 import 'package:screen_time/screens/Splash.dart';
 import 'package:screen_time/providers/usage_provider.dart';
+import 'dart:io';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -30,7 +31,17 @@ class RouterNotifier extends ChangeNotifier {
         (userState.userId == null && usageState.isLoading)) {
       return '/splash';
     }
-    // Om medgivande saknas på Android, visa UsagePage först
+
+    if (!Platform.isAndroid) {
+      if (userState.userId == null && state.uri.toString() != '/login') {
+        return '/login';
+      }
+      if (userState.userId != null && state.uri.toString() == '/login') {
+        return '/';
+      }
+      return null;
+    }
+
     if (!usageState.hasPermission) {
       if (state.uri.toString() != '/usage') {
         return '/usage';
