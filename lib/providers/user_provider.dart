@@ -27,24 +27,81 @@ class UserIdNotifier extends StateNotifier<UserState> {
   }
 
   Future<void> _loadFromSharedPreferences() async {
-    state = state.copyWith(isLoading: true);
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('userId');
-    state = UserState(userId: userId, isLoading: false);
+    try {
+      state = state.copyWith(isLoading: true);
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
 
-    if (userId != null) {
-      _autoUploadData(userId);
+      print('Loading user from SharedPreferences: $userId');
+
+      state = UserState(userId: userId, isLoading: false);
+
+      if (userId != null) {
+        _autoUploadData(userId);
+      }
+    } catch (e) {
+      print('Error loading user from SharedPreferences: $e');
+      state = const UserState(userId: null, isLoading: false);
     }
   }
 
   Future<void> setUserId(String? userId) async {
-    state = state.copyWith(userId: userId);
+    try {
+      state = state.copyWith(userId: userId);
+      final prefs = await SharedPreferences.getInstance();
+      if (userId != null) {
+        await prefs.setString('userId', userId);
+        print('User ID saved to SharedPreferences: $userId');
+        _autoUploadData(userId);
+      } else {
+        await prefs.remove('userId');
+        print('User ID removed from SharedPreferences');
+      }
+    } catch (e) {
+      print('Error setting user ID: $e');
+      final prefs = await SharedPreferences.getInstance();
+      final savedUserId = prefs.getString('userId');
+      state = state.copyWith(userId: savedUserId);
+    }
+  }
+
+  Future<void> logout() async {
+    state = state.copyWith(userId: null);
+
     final prefs = await SharedPreferences.getInstance();
-    if (userId != null) {
-      await prefs.setString('userId', userId);
-      _autoUploadData(userId);
-    } else {
-      await prefs.clear();
+    await prefs.remove('userId');
+
+    print('User logged out successfully');
+  }
+
+  Future<bool> isUserPersisted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUserId = prefs.getString('userId');
+      final currentUserId = state.userId;
+
+      print(
+          'Checking user persistence - Current: $currentUserId, Saved: $savedUserId');
+
+      return savedUserId != null && savedUserId == currentUserId;
+    } catch (e) {
+      print('Error checking user persistence: $e');
+      return false;
+    }
+  }
+
+  Future<void> validateUserState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUserId = prefs.getString('userId');
+
+      if (savedUserId != state.userId) {
+        print(
+            'User state mismatch detected! Current: ${state.userId}, Saved: $savedUserId');
+        state = state.copyWith(userId: savedUserId);
+      }
+    } catch (e) {
+      print('Error validating user state: $e');
     }
   }
 

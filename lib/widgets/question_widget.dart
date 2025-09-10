@@ -243,67 +243,43 @@ class _QuestionWidgetState extends State<QuestionWidget> {
         );
 
       case 'slider':
-        final bool hasAnswer = widget.answers[widget.question.id] != null;
-        final double currentValue = hasAnswer
-            ? (widget.answers[widget.question.id] as num).toDouble()
-            : 1.0;
-        final int divisions = widget.question.options.length > 1
-            ? widget.question.options.length - 1
-            : 1;
-        String currentLabel = hasAnswer
-            ? (() {
-                final index =
-                    (widget.answers[widget.question.id] as num).round() - 1;
-                if (index >= 0 && index < widget.question.options.length) {
-                  return widget.question.options[index].displayText;
-                }
-                return 'Välj ett alternativ';
-              })()
-            : 'Välj ett alternativ';
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildQuestionText(widget.question.text),
             AppTheme.spacer,
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: hasAnswer
-                    ? accentColor
-                    : accentColor.withAlpha((0.4 * 255).round()),
-                inactiveTrackColor: hasAnswer
-                    ? accentColor.withAlpha((0.3 * 255).round())
-                    : accentColor.withAlpha((0.2 * 255).round()),
-                thumbColor: hasAnswer
-                    ? accentColor
-                    : accentColor.withAlpha((0.6 * 255).round()),
-                overlayColor: hasAnswer
-                    ? accentColor.withAlpha((0.2 * 255).round())
-                    : accentColor.withAlpha((0.15 * 255).round()),
-                valueIndicatorColor: primaryTextColor,
-                valueIndicatorTextStyle: const TextStyle(color: Colors.white),
-              ),
-              child: Slider(
-                value: currentValue,
-                min: 1,
-                max: widget.question.options.length.toDouble(),
-                divisions: divisions,
-                label: currentLabel,
-                onChanged: (value) =>
-                    widget.onAnswered(widget.question.id, value.round()),
-              ),
-            ),
-            Center(
-              child: Text(
-                currentLabel,
-                style: AppTheme.body.copyWith(
-                    color: hasAnswer
-                        ? primaryTextColor.withAlpha((0.8 * 255).round())
-                        : primaryTextColor.withAlpha((0.6 * 255).round()),
-                    fontWeight: hasAnswer ? FontWeight.bold : FontWeight.w500,
-                    fontStyle: hasAnswer ? FontStyle.normal : FontStyle.italic),
-              ),
-            ),
+            ...widget.question.options.asMap().entries.map((entry) {
+              final index = entry.key;
+              final option = entry.value;
+              final optionValue = (index + 1).toString();
+              final isSelected =
+                  widget.answers[widget.question.id]?.toString() == optionValue;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? accentColor : borderColor,
+                    width: isSelected ? 1.5 : 1.0,
+                  ),
+                ),
+                child: RadioListTile<String>(
+                  title: Text(option.displayText, style: AppTheme.body),
+                  value: optionValue,
+                  groupValue: widget.answers[widget.question.id]?.toString(),
+                  onChanged: (value) =>
+                      widget.onAnswered(widget.question.id, int.parse(value!)),
+                  activeColor: accentColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  tileColor: isSelected
+                      ? accentColor.withAlpha((0.05 * 255).round())
+                      : null,
+                ),
+              );
+            }).toList(),
           ],
         );
 

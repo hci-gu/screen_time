@@ -48,20 +48,21 @@ class RouterNotifier extends ChangeNotifier {
       }
       return null;
     }
-    // Om ej inloggad, visa login (men bara om medgivande redan finns)
+
     if (userState.userId == null) {
-      if (usageState.hasPermission && state.uri.toString() != '/login') {
+      if (state.uri.toString() != '/login') {
         return '/login';
       }
       return null;
     }
-    // Om på login/usage och allt är klart, gå till startsidan
+
     if ((state.uri.toString() == '/login' ||
             state.uri.toString() == '/usage') &&
         usageState.hasPermission &&
         userState.userId != null) {
       return '/';
     }
+
     return null;
   }
 }

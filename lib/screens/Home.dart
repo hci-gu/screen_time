@@ -55,7 +55,7 @@ class HomePage extends ConsumerWidget {
                 );
 
                 if (confirmed == true) {
-                  await ref.read(userIdProvider.notifier).setUserId(null);
+                  await ref.read(userIdProvider.notifier).logout();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Du har loggats ut')),

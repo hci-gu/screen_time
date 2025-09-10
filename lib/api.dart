@@ -211,6 +211,8 @@ class Question {
     final subQuestions =
         subQuestionsData.map((data) => Question.fromJson(data)).toList();
 
+    subQuestions.sort((a, b) => _alphanumericCompare(a.name, b.name));
+
     return Question(
       id: json['id'],
       name: json['name'] ?? '',
@@ -223,6 +225,37 @@ class Question {
       lastDay: json['lastDay'] == true,
     );
   }
+}
+
+int _alphanumericCompare(String a, String b) {
+  final aMatches =
+      RegExp(r'(\d+|\D+)').allMatches(a).map((m) => m.group(0)!).toList();
+  final bMatches =
+      RegExp(r'(\d+|\D+)').allMatches(b).map((m) => m.group(0)!).toList();
+
+  final maxLength =
+      aMatches.length > bMatches.length ? aMatches.length : bMatches.length;
+
+  for (int i = 0; i < maxLength; i++) {
+    if (i >= aMatches.length) return -1;
+    if (i >= bMatches.length) return 1;
+
+    final aPart = aMatches[i];
+    final bPart = bMatches[i];
+
+    final aNum = int.tryParse(aPart);
+    final bNum = int.tryParse(bPart);
+
+    if (aNum != null && bNum != null) {
+      final numCompare = aNum.compareTo(bNum);
+      if (numCompare != 0) return numCompare;
+    } else {
+      final stringCompare = aPart.compareTo(bPart);
+      if (stringCompare != 0) return stringCompare;
+    }
+  }
+
+  return 0;
 }
 
 class Questionnaire {
@@ -262,12 +295,7 @@ class Questionnaire {
         allQuestions.where((q) => !subQuestionIds.contains(q.id)).toList();
 
     topLevelQuestions.sort((a, b) {
-      final aNum = int.tryParse(a.name);
-      final bNum = int.tryParse(b.name);
-      if (aNum != null && bNum != null) {
-        return aNum.compareTo(bNum);
-      }
-      return a.name.compareTo(b.name);
+      return _alphanumericCompare(a.name, b.name);
     });
 
     return Questionnaire(

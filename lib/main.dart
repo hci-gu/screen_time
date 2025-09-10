@@ -51,6 +51,16 @@ class _AppLifecycleObserver extends WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       _triggerAutoUpload();
+      _validateUserState();
+    }
+  }
+
+  void _validateUserState() async {
+    try {
+      final userNotifier = _ref.read(userIdProvider.notifier);
+      await userNotifier.validateUserState();
+    } catch (e) {
+      print('User state validation failed: $e');
     }
   }
 

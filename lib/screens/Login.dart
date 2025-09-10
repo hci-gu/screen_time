@@ -167,51 +167,76 @@ class LoginPage extends HookConsumerWidget {
                             ? null
                             : () async {
                                 loading.value = true;
-                                if (userId.value.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          "Användar-ID får inte vara tomt"),
-                                    ),
-                                  );
-                                  loading.value = false;
-                                  return;
-                                }
-                                bool exists =
-                                    await api.checkUserId(userId.value);
-                                await Future.delayed(
-                                    const Duration(milliseconds: 500));
-                                if (exists) {
-                                  ref
-                                      .read(userIdProvider.notifier)
-                                      .setUserId(userId.value);
-                                  await api
-                                      .setUserStartDateIfMissing(userId.value);
-
-                                  if (context.mounted) {
+                                try {
+                                  if (userId.value.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                          content: Text(
-                                              'Inloggad! Skärmtidsdata laddas upp automatiskt.')),
+                                        content: Text(
+                                            "Användar-ID får inte vara tomt"),
+                                      ),
                                     );
-                                  }
-
-                                  if (!usageState.hasPermission &&
-                                      context.mounted) {
-                                    Navigator.of(context).pushReplacement(
-                                      MaterialPageRoute(
-                                          builder: (_) => const UsagePage()),
-                                    );
+                                    loading.value = false;
                                     return;
                                   }
-                                } else if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Användar-ID finns inte"),
-                                    ),
-                                  );
+
+                                  bool exists =
+                                      await api.checkUserId(userId.value);
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 500));
+
+                                  if (exists) {
+                                    await ref
+                                        .read(userIdProvider.notifier)
+                                        .setUserId(userId.value);
+                                    await api.setUserStartDateIfMissing(
+                                        userId.value);
+
+                                    final isValidated = await ref
+                                        .read(userIdProvider.notifier)
+                                        .isUserPersisted();
+
+                                    if (!isValidated) {
+                                      throw Exception(
+                                          'Misslyckades med att spara användar-ID');
+                                    }
+
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Inloggad! Skärmtidsdata laddas upp automatiskt.')),
+                                      );
+                                    }
+
+                                    if (!usageState.hasPermission &&
+                                        context.mounted) {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                            builder: (_) => const UsagePage()),
+                                      );
+                                      return;
+                                    }
+                                  } else if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Användar-ID finns inte"),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  print('Login error: $e');
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            "Inloggning misslyckades: ${e.toString()}"),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  loading.value = false;
                                 }
-                                loading.value = false;
                               },
                       ),
                     ],
