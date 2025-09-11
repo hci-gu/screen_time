@@ -178,7 +178,6 @@ class Question {
   final String? showWhenParentIs;
   final List<AnswerOption> options;
   final List<Question> subQuestions;
-  final bool lastDay;
 
   Question({
     required this.id,
@@ -188,7 +187,6 @@ class Question {
     this.showWhenParentIs,
     this.options = const [],
     this.subQuestions = const [],
-    this.lastDay = false,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -222,7 +220,6 @@ class Question {
           json['showWhenParentIs'] == '' ? null : json['showWhenParentIs'],
       options: options,
       subQuestions: subQuestions,
-      lastDay: json['lastDay'] == true,
     );
   }
 }

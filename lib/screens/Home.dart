@@ -4,6 +4,7 @@ import '../providers/usage_provider.dart';
 import '../providers/user_provider.dart';
 import 'package:screen_time/theme/app_theme.dart';
 import '../api.dart';
+import '../utils/network_utils.dart';
 import 'Entry.dart';
 import 'History.dart';
 import 'Usage.dart';
@@ -55,10 +56,60 @@ class HomePage extends ConsumerWidget {
                 );
 
                 if (confirmed == true) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const AlertDialog(
+                      content: Row(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(width: 16),
+                          Text('Synkar data innan utloggning...'),
+                        ],
+                      ),
+                    ),
+                  );
+
+                  bool syncSuccessful = false;
+                  try {
+                    final userState = ref.read(userIdProvider);
+                    if (userState.userId != null) {
+                      syncSuccessful = await ref
+                          .read(userIdProvider.notifier)
+                          .uploadUserData();
+                    }
+                  } catch (e) {
+                    syncSuccessful = false;
+                  }
+
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+
                   await ref.read(userIdProvider.notifier).logout();
+
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Du har loggats ut')),
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(syncSuccessful ? Icons.check : Icons.warning,
+                                color: Colors.white),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                syncSuccessful
+                                    ? 'Du har loggats ut och all data har synkats'
+                                    : 'Du har loggats ut. Viss data kunde inte synkas på grund av nätverksproblem.',
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: syncSuccessful
+                            ? Colors.green
+                            : const Color.fromARGB(255, 255, 152, 0),
+                        duration: Duration(seconds: syncSuccessful ? 2 : 4),
+                      ),
                     );
                   }
                 }
@@ -109,11 +160,21 @@ class HomePage extends ConsumerWidget {
                     elevation: 0,
                   ),
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const HistoryPage()),
-                    );
+                    try {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HistoryPage()),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Kunde inte öppna historik. Försök igen.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                 ),
                 if (isAndroid) ...[
@@ -138,24 +199,99 @@ class HomePage extends ConsumerWidget {
                       elevation: 0,
                     ),
                     onPressed: () async {
-                      await usageNotifier.checkUsageStatsPermission();
-                      final refreshedUsageState = ref.read(usageProvider);
-                      if (!refreshedUsageState.hasPermission) {
+                      try {
+                        await usageNotifier.checkUsageStatsPermission();
+                        final refreshedUsageState = ref.read(usageProvider);
+                        if (!refreshedUsageState.hasPermission) {
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const UsagePage()),
+                            );
+                          }
+                          return;
+                        }
+
+                        final userState = ref.read(userIdProvider);
+                        if (userState.userId != null) {
+                          try {
+                            await usageNotifier.uploadData(userState.userId!);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.wifi_off,
+                                          color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Kunde inte synka skärmtidsdata. Kontrollera din internetanslutning.',
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 255, 152, 0),
+                                  duration: const Duration(seconds: 4),
+                                  action: SnackBarAction(
+                                    label: 'Försök igen',
+                                    textColor: Colors.white,
+                                    onPressed: () async {
+                                      try {
+                                        await usageNotifier
+                                            .uploadData(userState.userId!);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content:
+                                                  Text('Skärmtidsdata synkad!'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Synkning misslyckades igen'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        }
+
                         if (context.mounted) {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const UsagePage()),
+                                builder: (context) =>
+                                    const ScreentimeViewPage()),
                           );
                         }
-                        return;
-                      }
-                      if (context.mounted) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ScreentimeViewPage()),
-                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ett fel uppstod. Försök igen.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     },
                   ),
@@ -175,8 +311,11 @@ class HomePage extends ConsumerWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
+        if (snapshot.hasError) {
+          return _buildErrorHeroCard(context, textTheme, snapshot.error);
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return _buildNoDataHeroCard(context, textTheme);
         }
         final questionnaire = snapshot.data!
             .firstWhere((q) => q.id == 't0f34uiz4jal947', orElse: () {
@@ -192,21 +331,25 @@ class HomePage extends ConsumerWidget {
               return _buildDefaultHeroCard(context, textTheme, questionnaire);
             }
 
-            return FutureBuilder<bool>(
-              future: _checkTodayEntryExists(userId),
+            return FutureBuilder<String>(
+              future: _getEntryFormState(userId),
               builder: (context, entrySnapshot) {
                 if (entrySnapshot.connectionState == ConnectionState.waiting) {
                   return _buildDefaultHeroCard(
                       context, textTheme, questionnaire);
                 }
 
-                final hasEntryToday = entrySnapshot.data ?? false;
+                final state = entrySnapshot.data ?? 'show_form';
 
-                if (hasEntryToday) {
-                  return _buildCompletedHeroCard(context, textTheme);
-                } else {
-                  return _buildDefaultHeroCard(
-                      context, textTheme, questionnaire);
+                switch (state) {
+                  case 'completed_today':
+                    return _buildCompletedTodayHeroCard(context, textTheme);
+                  case 'study_completed':
+                    return _buildStudyCompletedHeroCard(context, textTheme);
+                  case 'show_form':
+                  default:
+                    return _buildDefaultHeroCard(
+                        context, textTheme, questionnaire);
                 }
               },
             );
@@ -214,6 +357,34 @@ class HomePage extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<String> _getEntryFormState(String userId) async {
+    try {
+      final startDate = await fetchUserStartDate(userId);
+      if (startDate == null) {
+        return 'show_form';
+      }
+
+      final today = DateTime.now();
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      final currentDay = DateTime(today.year, today.month, today.day);
+      final dayNumber = currentDay.difference(start).inDays + 1;
+
+      if (dayNumber > 10 || dayNumber < 1) {
+        return 'study_completed';
+      }
+
+      final hasEntryToday = await _checkTodayEntryExists(userId);
+
+      if (hasEntryToday) {
+        return 'completed_today';
+      }
+
+      return 'show_form';
+    } catch (e) {
+      return 'show_form';
+    }
   }
 
   Future<bool> _checkTodayEntryExists(String userId) async {
@@ -225,8 +396,9 @@ class HomePage extends ConsumerWidget {
 
       for (final answer in answers) {
         final dateStr = (answer['date'] ?? answer['created'] ?? '').toString();
+
         if (dateStr.isNotEmpty) {
-          final answerDate = DateTime.tryParse(dateStr.replaceFirst(' ', 'T'));
+          final answerDate = DateTime.tryParse(dateStr);
           if (answerDate != null) {
             final answerDateStr =
                 "${answerDate.year}-${answerDate.month.toString().padLeft(2, '0')}-${answerDate.day.toString().padLeft(2, '0')}";
@@ -242,7 +414,8 @@ class HomePage extends ConsumerWidget {
     }
   }
 
-  Widget _buildCompletedHeroCard(BuildContext context, TextTheme textTheme) {
+  Widget _buildCompletedTodayHeroCard(
+      BuildContext context, TextTheme textTheme) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -282,6 +455,60 @@ class HomePage extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Du har redan fyllt i dagens dagbok.',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudyCompletedHeroCard(
+      BuildContext context, TextTheme textTheme) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 156, 39, 176),
+            Color.fromARGB(255, 103, 58, 183)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.celebration,
+              size: 120,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Studien är klar!',
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tack för ditt deltagande! Du har fyllt i dagboken för alla 10 dagar i studien.',
                   style: textTheme.titleMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                   ),
@@ -360,18 +587,239 @@ class HomePage extends ConsumerWidget {
                             fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       onPressed: () async {
-                        final result = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  NewEntryPage(questionnaire: questionnaire)),
-                        );
+                        final hasNetwork =
+                            await NetworkUtils.hasNetworkConnection();
 
-                        if (result == true && context.mounted) {
-                          ref.invalidate(userIdProvider);
+                        if (!hasNetwork) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.wifi_off, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Ingen internetanslutning. Internetanslutning krävs för att fylla i dagboken.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor:
+                                    Color.fromARGB(255, 255, 152, 0),
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
+                        try {
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    NewEntryPage(questionnaire: questionnaire)),
+                          );
+
+                          if (result == true && context.mounted) {
+                            ref.invalidate(userIdProvider);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.check, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text('Dagbok sparad!'),
+                                  ],
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            final isNetworkError =
+                                NetworkUtils.isNetworkError(e);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(
+                                        isNetworkError
+                                            ? Icons.wifi_off
+                                            : Icons.error_outline,
+                                        color: Colors.white),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        isNetworkError
+                                            ? 'Internetanslutningen bröts. Dagboken kunde inte sparas.'
+                                            : 'Ett fel uppstod när dagboken skulle sparas.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                              ),
+                            );
+                          }
                         }
                       },
                     );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorHeroCard(
+      BuildContext context, TextTheme textTheme, Object? error) {
+    final bool isNetworkError = NetworkUtils.isNetworkError(error);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 255, 152, 0),
+            Color.fromARGB(255, 255, 193, 7)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              isNetworkError ? Icons.wifi_off : Icons.error_outline,
+              size: 120,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isNetworkError
+                      ? 'Ingen internetanslutning'
+                      : 'Något gick fel',
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isNetworkError
+                      ? 'Kontrollera din internetanslutning och försök igen. Internetanslutning krävs för att fylla i dagboken.'
+                      : 'Ett oväntat fel inträffade. Försök igen senare.',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  label: const Text('Försök igen',
+                      style: TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white, width: 1.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
+                    textStyle: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () {
+                    final container = ProviderScope.containerOf(context);
+                    container.invalidate(userIdProvider);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoDataHeroCard(BuildContext context, TextTheme textTheme) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromARGB(255, 158, 158, 158),
+            Color.fromARGB(255, 117, 117, 117)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color.fromARGB(255, 224, 227, 231)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.inbox,
+              size: 120,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Inga formulär tillgängliga',
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Det finns inga formulär att fylla i just nu. Kontrollera din internetanslutning eller försök igen senare.',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  label: const Text('Försök igen',
+                      style: TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white, width: 1.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
+                    textStyle: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () {
+                    final container = ProviderScope.containerOf(context);
+                    container.invalidate(userIdProvider);
                   },
                 ),
               ],

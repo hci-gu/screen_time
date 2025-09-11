@@ -7,6 +7,7 @@ import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/providers/usage_provider.dart';
 import 'package:screen_time/screens/Usage.dart';
 import 'package:screen_time/theme/app_theme.dart';
+import 'package:screen_time/utils/network_utils.dart';
 
 /// En formatter som hanterar användarid
 /// om man skriver "099" -> blir "099-"
@@ -173,8 +174,51 @@ class LoginPage extends HookConsumerWidget {
                                       const SnackBar(
                                         content: Text(
                                             "Användar-ID får inte vara tomt"),
+                                        backgroundColor: Colors.red,
                                       ),
                                     );
+                                    loading.value = false;
+                                    return;
+                                  }
+
+                                  final hasNetwork =
+                                      await NetworkUtils.hasNetworkConnection();
+                                  if (!hasNetwork) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: const Row(
+                                            children: [
+                                              Icon(Icons.wifi_off,
+                                                  color: Colors.white),
+                                              SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'Ingen internetanslutning. Internetanslutning krävs för att logga in.',
+                                                  style: TextStyle(
+                                                      color: Colors.white),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          backgroundColor: const Color.fromARGB(
+                                              255, 255, 152, 0),
+                                          duration: const Duration(seconds: 4),
+                                          action: SnackBarAction(
+                                            label: 'Försök igen',
+                                            textColor: Colors.white,
+                                            onPressed: () {
+                                              if (!loading.value) {
+                                                WidgetsBinding.instance
+                                                    .addPostFrameCallback(
+                                                        (_) {});
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
                                     loading.value = false;
                                     return;
                                   }
@@ -204,8 +248,17 @@ class LoginPage extends HookConsumerWidget {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         const SnackBar(
-                                            content: Text(
-                                                'Inloggad! Skärmtidsdata laddas upp automatiskt.')),
+                                          content: Row(
+                                            children: [
+                                              Icon(Icons.check,
+                                                  color: Colors.white),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                  'Inloggad! Skärmtidsdata laddas upp automatiskt.'),
+                                            ],
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
                                       );
                                     }
 
@@ -220,17 +273,60 @@ class LoginPage extends HookConsumerWidget {
                                   } else if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text("Användar-ID finns inte"),
+                                        content: Row(
+                                          children: [
+                                            Icon(Icons.person_off,
+                                                color: Colors.white),
+                                            SizedBox(width: 8),
+                                            Text("Användar-ID finns inte"),
+                                          ],
+                                        ),
+                                        backgroundColor: Colors.red,
                                       ),
                                     );
                                   }
                                 } catch (e) {
                                   print('Login error: $e');
                                   if (context.mounted) {
+                                    final isNetworkError =
+                                        NetworkUtils.isNetworkError(e);
+                                    final errorMessage =
+                                        NetworkUtils.getErrorMessage(e,
+                                            customNetworkMessage:
+                                                'Internetanslutningen bröts under inloggningen. Kontrollera din anslutning och försök igen.');
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text(
-                                            "Inloggning misslyckades: ${e.toString()}"),
+                                        content: Row(
+                                          children: [
+                                            Icon(
+                                              isNetworkError
+                                                  ? Icons.wifi_off
+                                                  : Icons.error_outline,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                errorMessage,
+                                                style: const TextStyle(
+                                                    color: Colors.white),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        backgroundColor: isNetworkError
+                                            ? const Color.fromARGB(
+                                                255, 255, 152, 0)
+                                            : Colors.red,
+                                        duration: const Duration(seconds: 4),
+                                        action: isNetworkError
+                                            ? SnackBarAction(
+                                                label: 'Försök igen',
+                                                textColor: Colors.white,
+                                                onPressed: () {},
+                                              )
+                                            : null,
                                       ),
                                     );
                                   }

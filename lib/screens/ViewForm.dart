@@ -4,6 +4,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:screen_time/theme/app_theme.dart';
 import '../api.dart';
 import '../providers/user_provider.dart';
+import '../utils/network_utils.dart';
 import '../widgets/question_widget.dart';
 
 class EntryDetailPage extends ConsumerStatefulWidget {
@@ -41,6 +42,16 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
     }
 
     try {
+      final hasNetwork = await NetworkUtils.hasNetworkConnection();
+      if (!hasNetwork) {
+        setState(() {
+          _error =
+              'Ingen internetanslutning. Internetanslutning krävs för att ladda formuläret.';
+          _isLoading = false;
+        });
+        return;
+      }
+
       final questionnaire = await fetchQuestionnaireById(questionnaireId);
       if (mounted) {
         setState(() {
@@ -50,8 +61,13 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
       }
     } catch (e) {
       if (mounted) {
+        final isNetworkError = NetworkUtils.isNetworkError(e);
+        final errorMessage = isNetworkError
+            ? 'Internetanslutningen bröts. Kontrollera din anslutning och försök igen.'
+            : 'Formuläret kunde inte läsas in.';
+
         setState(() {
-          _error = 'Formulärstrukturen kunde inte läsas in.';
+          _error = errorMessage;
           _isLoading = false;
         });
       }
@@ -158,20 +174,66 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
     if (answerId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fel: Kunde inte hitta svar-ID.')),
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Fel: Kunde inte hitta svar-ID.'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       return;
     }
 
     try {
+      final hasNetwork = await NetworkUtils.hasNetworkConnection();
+      if (!hasNetwork) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Ingen internetanslutning. Internetanslutning krävs för att spara ändringar.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Color.fromARGB(255, 255, 152, 0),
+              duration: Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
       bool success = await editAnswer(answerId, _answers);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                success ? 'Ändringar sparade!' : 'Kunde inte spara ändringar.'),
+            content: Row(
+              children: [
+                Icon(
+                  success ? Icons.check : Icons.error_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(success
+                    ? 'Ändringar sparade!'
+                    : 'Kunde inte spara ändringar.'),
+              ],
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -183,9 +245,32 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
       }
     } catch (e) {
       if (mounted) {
+        final isNetworkError = NetworkUtils.isNetworkError(e);
+        final errorMessage = isNetworkError
+            ? 'Internetanslutningen bröts under sparandet. Kontrollera din anslutning och försök igen.'
+            : 'Fel vid sparande: $e';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fel vid sparande: $e'),
+            content: Row(
+              children: [
+                Icon(
+                  isNetworkError ? Icons.wifi_off : Icons.error_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isNetworkError
+                ? const Color.fromARGB(255, 255, 152, 0)
+                : Colors.red,
+            duration: const Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -259,13 +344,64 @@ class _EntryDetailPageState extends ConsumerState<EntryDetailPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
+      final isNetworkError = _error!.contains('Ingen internetanslutning') ||
+          _error!.contains('Internetanslutningen bröts');
+
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.error, fontSize: 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isNetworkError ? Icons.wifi_off : Icons.error_outline,
+                size: 80,
+                color: isNetworkError
+                    ? const Color.fromARGB(255, 255, 152, 0)
+                    : AppTheme.error,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                isNetworkError ? 'Ingen internetanslutning' : 'Ett fel uppstod',
+                style: TextStyle(
+                  color: isNetworkError
+                      ? const Color.fromARGB(255, 255, 152, 0)
+                      : AppTheme.error,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(color: AppTheme.cardBorder, fontSize: 16),
+              ),
+              if (isNetworkError) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh, color: AppTheme.primary),
+                  label: const Text('Försök igen'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.background,
+                    foregroundColor: AppTheme.primary,
+                    side: const BorderSide(color: AppTheme.primary, width: 1.2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _error = null;
+                    });
+                    _loadQuestionnaire();
+                  },
+                ),
+              ],
+            ],
           ),
         ),
       );

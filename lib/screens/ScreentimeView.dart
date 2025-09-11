@@ -4,6 +4,7 @@ import 'package:screen_time/providers/usage_provider.dart';
 import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/theme/app_theme.dart';
 import 'package:screen_time/widgets/total_usage_text.dart';
+import 'package:screen_time/utils/network_utils.dart';
 import 'dart:io';
 
 class ScreentimeViewPage extends ConsumerWidget {
@@ -59,6 +60,107 @@ class ScreentimeViewPage extends ConsumerWidget {
     ref.read(usageProvider.notifier).updateDate(newDateString);
   }
 
+  Future<void> _handleUpload(BuildContext context, WidgetRef ref) async {
+    final userState = ref.read(userIdProvider);
+    final userId = userState.userId;
+    final usageNotifier = ref.read(usageProvider.notifier);
+
+    if (userId == null || userId.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.person_off, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Ingen användare inloggad.'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final hasNetwork = await NetworkUtils.hasNetworkConnection();
+    if (!hasNetwork) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.wifi_off, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ingen internetanslutning. Internetanslutning krävs för att ladda upp data.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Color.fromARGB(255, 255, 152, 0),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final success = await usageNotifier.uploadLast7Days(userId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  success ? Icons.check : Icons.error_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(success ? 'Data uppladdad!' : 'Uppladdning misslyckades.'),
+              ],
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        final isNetworkError = NetworkUtils.isNetworkError(e);
+        final errorMessage = NetworkUtils.getErrorMessage(e,
+            customNetworkMessage:
+                'Internetanslutningen bröts under uppladdningen. Kontrollera din anslutning och försök igen.');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  isNetworkError ? Icons.wifi_off : Icons.error_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isNetworkError
+                ? const Color.fromARGB(255, 255, 152, 0)
+                : Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
   String _formatDuration(int seconds) {
     if (seconds < 60) return '${seconds}s';
     final hours = seconds ~/ 3600;
@@ -103,8 +205,6 @@ class ScreentimeViewPage extends ConsumerWidget {
 
     final usageState = ref.watch(usageProvider);
     final usageNotifier = ref.read(usageProvider.notifier);
-    final userState = ref.watch(userIdProvider);
-    final userId = userState.userId;
 
     final totalSeconds = usageState.usageData.values.fold(0, (a, b) => a + b);
     final isToday = _isToday(usageState.date);
@@ -128,20 +228,7 @@ class ScreentimeViewPage extends ConsumerWidget {
           if (usageNotifier.isAndroid)
             IconButton(
               icon: const Icon(Icons.cloud_upload),
-              onPressed: () async {
-                if (userId != null && userId.isNotEmpty) {
-                  final success = await usageNotifier.uploadLast7Days(userId);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success
-                            ? 'Data uppladdad!'
-                            : 'Uppladdning misslyckades.'),
-                      ),
-                    );
-                  }
-                }
-              },
+              onPressed: () => _handleUpload(context, ref),
             ),
         ],
       ),
