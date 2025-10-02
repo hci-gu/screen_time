@@ -44,7 +44,12 @@ class UsageNotifier extends StateNotifier<UsageState> {
     final usage = state.usageData;
     final raw = prefs.getString('screenTimeLocal') ?? '{}';
     final Map<String, dynamic> allData = jsonDecode(raw);
-    allData[date] = usage;
+    allData[date] = usage.map((key, value) {
+      final storedValue = allData[date]?[key] ?? 0;
+      final highestValue = storedValue > value ? storedValue : value;
+
+      return MapEntry(key, highestValue);
+    });
     await prefs.setString('screenTimeLocal', jsonEncode(allData));
   }
 
@@ -141,12 +146,33 @@ class UsageNotifier extends StateNotifier<UsageState> {
       state = state.copyWith(usageData: {});
       return;
     }
+
+    String date = state.date;
+
     try {
-      final Map<String, int> result =
-          await Screentime().getUsageStats(state.date);
-      state = state.copyWith(usageData: result);
-      // Spara till localstorage varje gång ny data hämtas
-      await saveTodayUsageToLocal();
+      Map<String, int> usage = {};
+      final now = DateTime.now();
+
+      // Fetch usage for today and the previous 9 days (10 days total)
+      for (int i = 0; i < 10; i++) {
+        final day = now.subtract(Duration(days: i));
+        final dateStr =
+            "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+        try {
+          final Map<String, int> result =
+              await Screentime().getUsageStats(dateStr);
+          state = state.copyWith(date: dateStr, usageData: result);
+          await saveTodayUsageToLocal();
+
+          if (dateStr == date) {
+            usage = result;
+          }
+        } catch (_) {}
+      }
+
+      // Update state. If the current state.date wasn't among fetched days,
+      // fall back to an empty map.
+      state = state.copyWith(date: date, usageData: usage);
     } on PlatformException catch (e) {
       print("getUsageStats error: ${e.message}");
     }

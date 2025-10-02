@@ -31,6 +31,8 @@ class ScreentimeServiceHandler extends TaskHandler {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId");
 
+    await notifier.getUsageStats();
+
     if (userId == null) {
       return;
     }
