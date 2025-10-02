@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:pocketbase/pocketbase.dart';
 
@@ -60,6 +61,47 @@ Future<bool> uploadData(String userId, Map<String, dynamic> usageData) async {
     return true;
   } else {
     throw Exception('Failed to upload data');
+  }
+}
+
+/// Creates a new record in the `ios_screentime` collection with the given
+/// image file and links it to the provided [userId].
+///
+/// Provide either [imageBytes] or [filePath]. Returns the created record id
+/// on success, or `null` on failure.
+Future<String?> saveIosScreenTime({
+  required String userId,
+  Uint8List? imageBytes,
+  String? filePath,
+  String fileName = 'screentime.png',
+}) async {
+  try {
+    final files = <http.MultipartFile>[];
+
+    if (imageBytes != null) {
+      files.add(
+        http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
+      );
+    } else if (filePath != null) {
+      files.add(
+        await http.MultipartFile.fromPath('image', filePath,
+            filename: fileName),
+      );
+    } else {
+      throw ArgumentError('Either imageBytes or filePath must be provided');
+    }
+
+    final record = await pb.collection('ios_screentime').create(
+      body: {
+        'user': userId,
+      },
+      files: files,
+    );
+
+    return record.id;
+  } catch (e) {
+    print('Error saving ios_screentime: $e');
+    return null;
   }
 }
 
@@ -302,3 +344,5 @@ class Questionnaire {
     );
   }
 }
+
+
