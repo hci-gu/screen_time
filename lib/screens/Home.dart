@@ -266,7 +266,8 @@ class HomePage extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-                _uploadScreenshotsButton(),
+                if (!isAndroid)
+                  _uploadScreenshotsButton(),
               ],
             ),
           ),
