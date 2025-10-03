@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screen_time/screens/UploadScreenshotsPage.dart';
 import '../providers/usage_provider.dart';
 import '../providers/user_provider.dart';
 import 'package:screen_time/theme/app_theme.dart';
@@ -140,26 +141,10 @@ class HomePage extends ConsumerWidget {
               children: [
                 _buildHeroCard(context, textTheme),
                 const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.history_rounded,
-                      color: AppTheme.primary),
-                  label: const Text(
-                    'Se tidigare dagboksanteckningar',
-                    style: TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.cardBorder,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
+                _actionButton(
+                  Icons.history_rounded,
+                  'Se tidigare dagboksanteckningar',
+                  () {
                     try {
                       Navigator.push(
                         context,
@@ -177,28 +162,12 @@ class HomePage extends ConsumerWidget {
                     }
                   },
                 ),
+                const SizedBox(height: 16),
                 if (isAndroid) ...[
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.phone_android,
-                        color: AppTheme.primary),
-                    label: const Text(
-                      'Se skärmtidsdata',
-                      style: TextStyle(
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.cardBorder,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () async {
+                  _actionButton(
+                    Icons.phone_android,
+                    'Se skärmtidsdata',
+                    () async {
                       try {
                         await usageNotifier.checkUsageStatsPermission();
                         final refreshedUsageState = ref.read(usageProvider);
@@ -296,12 +265,47 @@ class HomePage extends ConsumerWidget {
                     },
                   ),
                 ],
+                const SizedBox(height: 16),
+                _uploadScreenshotsButton(),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _actionButton(IconData icon, String label, void Function() onPressed) {
+    return ElevatedButton.icon(
+        icon: Icon(icon, color: AppTheme.primary),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.primary,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.cardBorder,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+        onPressed: onPressed);
+  }
+
+  Widget _uploadScreenshotsButton() {
+    return Builder(
+        builder: (context) =>
+            _actionButton(Icons.image, 'Ladda upp skärmbilder', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UploadScreenshotsPage()),
+              );
+            }));
   }
 
   Widget _buildHeroCard(BuildContext context, TextTheme textTheme) {

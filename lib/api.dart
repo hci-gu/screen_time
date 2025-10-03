@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 import 'package:pocketbase/pocketbase.dart';
 
 const apiUrl = 'https://screentime-api.prod.appadem.in';
@@ -78,14 +82,27 @@ Future<String?> saveIosScreenTime({
   try {
     final files = <http.MultipartFile>[];
 
+    MediaType? contentType;
+
     if (imageBytes != null) {
+      contentType = _resolveMediaType(fileName, imageBytes);
       files.add(
-        http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: fileName,
+          contentType: contentType,
+        ),
       );
     } else if (filePath != null) {
+      contentType = _resolveMediaType(fileName, await _peekFileBytes(filePath));
       files.add(
-        await http.MultipartFile.fromPath('image', filePath,
-            filename: fileName),
+        await http.MultipartFile.fromPath(
+          'image',
+          filePath,
+          filename: fileName,
+          contentType: contentType,
+        ),
       );
     } else {
       throw ArgumentError('Either imageBytes or filePath must be provided');
@@ -100,7 +117,32 @@ Future<String?> saveIosScreenTime({
 
     return record.id;
   } catch (e) {
-    print('Error saving ios_screentime: $e');
+    // Return a descriptive error via null; caller should show a message
+    print('Error saving ios_screentime for user $userId: $e');
+    return null;
+  }
+}
+
+Future<Uint8List?> _peekFileBytes(String path, {int maxLength = 16}) async {
+  try {
+    final file = File(path);
+    if (!await file.exists()) return null;
+    final bytes = await file.openRead(0, maxLength).fold<BytesBuilder>(
+          BytesBuilder(),
+          (builder, data) => builder..add(data),
+        );
+    return bytes.takeBytes();
+  } catch (_) {
+    return null;
+  }
+}
+
+MediaType? _resolveMediaType(String fileName, Uint8List? headerBytes) {
+  final mimeType = lookupMimeType(fileName, headerBytes: headerBytes);
+  if (mimeType == null) return null;
+  try {
+    return MediaType.parse(mimeType);
+  } catch (_) {
     return null;
   }
 }
