@@ -331,7 +331,9 @@ class LoginPage extends HookConsumerWidget {
                                     );
                                   }
                                 } finally {
-                                  loading.value = false;
+                                  if (context.mounted) {
+                                    loading.value = false;
+                                  }
                                 }
                               },
                       ),
