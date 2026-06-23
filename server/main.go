@@ -17,7 +17,7 @@ type ScreenTimeEntry struct {
 	Seconds int    `json:"seconds"`
 }
 
-var data struct {
+type UploadRequest struct {
 	ScreenTimeEntries []ScreenTimeEntry `json:"screenTimeEntries"`
 }
 
@@ -30,8 +30,7 @@ func createJobRecord(app *pocketbase.PocketBase, userId string) error {
 	}
 	record := core.NewRecord(collection)
 	record.Set("user", userId)
-	app.Save(record)
-	return nil
+	return app.Save(record)
 }
 
 func main() {
@@ -43,20 +42,24 @@ func main() {
 			id := e.Request.PathValue("id")
 			log.Println("Received upload request", id)
 
+			var upload UploadRequest
+
 			// Bind parsed JSON to struct
-			if err := e.BindBody(&data); err != nil {
+			if err := e.BindBody(&upload); err != nil {
 				return e.BadRequestError("Failed to parse JSON", err)
 			}
 
-			createJobRecord(app, id)
+			if err := createJobRecord(app, id); err != nil {
+				return err
+			}
 
-			log.Printf("Parsed %d screenTimeEntries", len(data.ScreenTimeEntries))
+			log.Printf("Parsed %d screenTimeEntries", len(upload.ScreenTimeEntries))
 			collection, err := app.FindCollectionByNameOrId("screentime")
 			if err != nil {
 				return err
 			}
 
-			for _, entry := range data.ScreenTimeEntries {
+			for _, entry := range upload.ScreenTimeEntries {
 				// Build a filter to check if a record exists with the same user and hour
 				filter := fmt.Sprintf("user = '%s' && hour = '%s' && date = '%s'", id, entry.Hour, entry.Date)
 				existingRecords, err := app.FindRecordsByFilter("screentime", filter, "", 5, 0)
@@ -114,7 +117,7 @@ func main() {
 
 			log.Printf("Found user: %s", user.GetString("username"))
 
-			return e.JSON(http.StatusOK, data)
+			return e.JSON(http.StatusOK, map[string]string{"id": user.Id})
 		})
 
 		// serves static files from the provided public dir (if exists)
