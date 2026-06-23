@@ -29,7 +29,12 @@ class MyApp extends HookConsumerWidget {
       ),
     );
 
-    WidgetsBinding.instance.addObserver(_AppLifecycleObserver(ref));
+    useEffect(() {
+      final observer = _AppLifecycleObserver(ref);
+      WidgetsBinding.instance.addObserver(observer);
+
+      return () => WidgetsBinding.instance.removeObserver(observer);
+    }, const []);
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
@@ -42,6 +47,7 @@ class MyApp extends HookConsumerWidget {
 
 class _AppLifecycleObserver extends WidgetsBindingObserver {
   final WidgetRef _ref;
+  bool _isHandlingResume = false;
 
   _AppLifecycleObserver(this._ref);
 
@@ -50,12 +56,25 @@ class _AppLifecycleObserver extends WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      _triggerAutoUpload();
-      _validateUserState();
+      _handleResume();
     }
   }
 
-  void _validateUserState() async {
+  Future<void> _handleResume() async {
+    if (_isHandlingResume) {
+      return;
+    }
+
+    _isHandlingResume = true;
+    try {
+      await _triggerAutoUpload();
+      await _validateUserState();
+    } finally {
+      _isHandlingResume = false;
+    }
+  }
+
+  Future<void> _validateUserState() async {
     try {
       final userNotifier = _ref.read(userIdProvider.notifier);
       await userNotifier.validateUserState();
@@ -64,7 +83,7 @@ class _AppLifecycleObserver extends WidgetsBindingObserver {
     }
   }
 
-  void _triggerAutoUpload() async {
+  Future<void> _triggerAutoUpload() async {
     try {
       final userState = _ref.read(userIdProvider);
       if (userState.userId != null) {
