@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:screen_time/providers/usage_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';

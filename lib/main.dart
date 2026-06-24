@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:screen_time/router.dart';
 import 'package:screen_time/theme/app_theme.dart';
@@ -20,16 +20,21 @@ class MyApp extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final lifecycleObserver = useMemoized(() => _AppLifecycleObserver(ref), [
+      ref,
+    ]);
+
+    useEffect(() {
+      WidgetsBinding.instance.addObserver(lifecycleObserver);
+      return () {
+        WidgetsBinding.instance.removeObserver(lifecycleObserver);
+      };
+    }, [lifecycleObserver]);
+
     final userState = ref.watch(userIdProvider);
     final router = ref.watch(
-      routerProvider(
-        RouterProps(
-          loggedIn: userState.userId != null,
-        ),
-      ),
+      routerProvider(RouterProps(loggedIn: userState.userId != null)),
     );
-
-    WidgetsBinding.instance.addObserver(_AppLifecycleObserver(ref));
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,

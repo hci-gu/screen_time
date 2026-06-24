@@ -7,20 +7,14 @@ import 'package:screen_time/screens/Login.dart';
 import 'package:screen_time/screens/Usage.dart';
 import 'package:screen_time/screens/Splash.dart';
 import 'package:screen_time/providers/usage_provider.dart';
-import 'dart:io';
+import 'package:screen_time/utils/platform_utils.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
   RouterNotifier(this._ref) {
-    _ref.listen<UserState>(
-      userIdProvider,
-      (_, __) => notifyListeners(),
-    );
-    _ref.listen<UsageState>(
-      usageProvider,
-      (_, __) => notifyListeners(),
-    );
+    _ref.listen<UserState>(userIdProvider, (_, __) => notifyListeners());
+    _ref.listen<UsageState>(usageProvider, (_, __) => notifyListeners());
   }
 
   String? _redirectLogic(BuildContext context, GoRouterState state) {
@@ -32,7 +26,7 @@ class RouterNotifier extends ChangeNotifier {
       return '/splash';
     }
 
-    if (!Platform.isAndroid) {
+    if (!PlatformUtils.isAndroid) {
       if (userState.userId == null && state.uri.toString() != '/login') {
         return '/login';
       }

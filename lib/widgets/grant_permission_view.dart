@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/usage_provider.dart';
 import 'package:screen_time/theme/app_theme.dart';
-import 'dart:io';
+import 'package:screen_time/utils/platform_utils.dart';
 
 class GrantPermissionView extends ConsumerWidget {
   const GrantPermissionView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!Platform.isAndroid) {
+    if (!PlatformUtils.isAndroid) {
       return Center(
         child: Padding(
           padding: AppTheme.elementPadding,
@@ -75,8 +75,11 @@ class GrantPermissionView extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.privacy_tip_rounded,
-                  size: 56, color: AppTheme.primary),
+              Icon(
+                Icons.privacy_tip_rounded,
+                size: 56,
+                color: AppTheme.primary,
+              ),
               AppTheme.spacer,
               Text(
                 'Ge åtkomst till användarspårning',
@@ -96,10 +99,14 @@ class GrantPermissionView extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accent,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
                   textStyle: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 16),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
