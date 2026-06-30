@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -32,9 +30,12 @@ Future<void> setUserStartDateIfMissing(String userId) async {
     final user = await pb.collection('users').getOne(userId);
     if (user.data['startDate'] == null ||
         user.data['startDate'].toString().isEmpty) {
-      await pb.collection('users').update(userId, body: {
-        'startDate': DateTime.now().toIso8601String(),
-      });
+      await pb
+          .collection('users')
+          .update(
+            userId,
+            body: {'startDate': DateTime.now().toIso8601String()},
+          );
     }
   } catch (e) {
     throw Exception('Error setting user start date: $e');
@@ -71,68 +72,33 @@ Future<bool> uploadData(String userId, Map<String, dynamic> usageData) async {
 /// Creates a new record in the `ios_screentime` collection with the given
 /// image file and links it to the provided [userId].
 ///
-/// Provide either [imageBytes] or [filePath]. Returns the created record id
-/// on success, or `null` on failure.
+/// Returns the created record id on success, or `null` on failure.
 Future<String?> saveIosScreenTime({
   required String userId,
-  Uint8List? imageBytes,
-  String? filePath,
+  required Uint8List imageBytes,
   String fileName = 'screentime.png',
 }) async {
   try {
     final files = <http.MultipartFile>[];
 
-    MediaType? contentType;
-
-    if (imageBytes != null) {
-      contentType = _resolveMediaType(fileName, imageBytes);
-      files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          imageBytes,
-          filename: fileName,
-          contentType: contentType,
-        ),
-      );
-    } else if (filePath != null) {
-      contentType = _resolveMediaType(fileName, await _peekFileBytes(filePath));
-      files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          filePath,
-          filename: fileName,
-          contentType: contentType,
-        ),
-      );
-    } else {
-      throw ArgumentError('Either imageBytes or filePath must be provided');
-    }
-
-    final record = await pb.collection('ios_screentime').create(
-      body: {
-        'user': userId,
-      },
-      files: files,
+    final contentType = _resolveMediaType(fileName, imageBytes);
+    files.add(
+      http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: fileName,
+        contentType: contentType,
+      ),
     );
+
+    final record = await pb
+        .collection('ios_screentime')
+        .create(body: {'user': userId}, files: files);
 
     return record.id;
   } catch (e) {
     // Return a descriptive error via null; caller should show a message
     print('Error saving ios_screentime for user $userId: $e');
-    return null;
-  }
-}
-
-Future<Uint8List?> _peekFileBytes(String path, {int maxLength = 16}) async {
-  try {
-    final file = File(path);
-    if (!await file.exists()) return null;
-    final bytes = await file.openRead(0, maxLength).fold<BytesBuilder>(
-          BytesBuilder(),
-          (builder, data) => builder..add(data),
-        );
-    return bytes.takeBytes();
-  } catch (_) {
     return null;
   }
 }
@@ -148,8 +114,11 @@ MediaType? _resolveMediaType(String fileName, Uint8List? headerBytes) {
 }
 
 Future<bool> answerQuestionnaire(
-    String userId, String questionnaireId, Map<String, dynamic> answers,
-    {DateTime? customDate}) async {
+  String userId,
+  String questionnaireId,
+  Map<String, dynamic> answers, {
+  DateTime? customDate,
+}) async {
   try {
     final body = {
       'user': userId,
@@ -170,7 +139,9 @@ Future<bool> answerQuestionnaire(
 
 Future<List<Map<String, dynamic>>> fetchUserAnswers(String userId) async {
   try {
-    final result = await pb.collection('answers').getFullList(
+    final result = await pb
+        .collection('answers')
+        .getFullList(
           filter: "user = '$userId'",
           sort: '-created',
           expand: 'questionnaire',
@@ -182,14 +153,9 @@ Future<List<Map<String, dynamic>>> fetchUserAnswers(String userId) async {
   }
 }
 
-Future<bool> editAnswer(
-  String answerId,
-  Map<String, dynamic> answers,
-) async {
+Future<bool> editAnswer(String answerId, Map<String, dynamic> answers) async {
   try {
-    await pb.collection('answers').update(answerId, body: {
-      'data': answers,
-    });
+    await pb.collection('answers').update(answerId, body: {'data': answers});
     return true;
   } catch (e) {
     throw Exception('Error answering questionnaire: $e');
@@ -197,9 +163,12 @@ Future<bool> editAnswer(
 }
 
 Future<List<Questionnaire>> fetchQuestionnaires() async {
-  final result = await pb.collection('questionnaires').getFullList(
+  final result = await pb
+      .collection('questionnaires')
+      .getFullList(
         sort: '-created',
-        expand: 'questions,'
+        expand:
+            'questions,'
             'questions.options,'
             'questions.subQuestions,'
             'questions.subQuestions.options,'
@@ -216,9 +185,12 @@ Future<List<Questionnaire>> fetchQuestionnaires() async {
 
 Future<Questionnaire> fetchQuestionnaireById(String questionnaireId) async {
   try {
-    final record = await pb.collection('questionnaires').getOne(
+    final record = await pb
+        .collection('questionnaires')
+        .getOne(
           questionnaireId,
-          expand: 'questions,'
+          expand:
+              'questions,'
               'questions.options,'
               'questions.subQuestions,'
               'questions.subQuestions.options,'
@@ -277,8 +249,9 @@ class Question {
     final expand = json['expand'] as Map<String, dynamic>? ?? {};
 
     final optionsData = expand['options'] as List<dynamic>? ?? [];
-    final options =
-        optionsData.map((data) => AnswerOption.fromJson(data)).toList();
+    final options = optionsData
+        .map((data) => AnswerOption.fromJson(data))
+        .toList();
 
     options.sort((a, b) {
       if (a.valueNumber != null && b.valueNumber != null) {
@@ -290,8 +263,9 @@ class Question {
     });
 
     final subQuestionsData = expand['subQuestions'] as List<dynamic>? ?? [];
-    final subQuestions =
-        subQuestionsData.map((data) => Question.fromJson(data)).toList();
+    final subQuestions = subQuestionsData
+        .map((data) => Question.fromJson(data))
+        .toList();
 
     subQuestions.sort((a, b) => _alphanumericCompare(a.name, b.name));
 
@@ -300,8 +274,9 @@ class Question {
       name: json['name'] ?? '',
       text: json['text'] ?? '',
       type: json['type'] ?? 'freeText',
-      showWhenParentIs:
-          json['showWhenParentIs'] == '' ? null : json['showWhenParentIs'],
+      showWhenParentIs: json['showWhenParentIs'] == ''
+          ? null
+          : json['showWhenParentIs'],
       options: options,
       subQuestions: subQuestions,
     );
@@ -309,13 +284,16 @@ class Question {
 }
 
 int _alphanumericCompare(String a, String b) {
-  final aMatches =
-      RegExp(r'(\d+|\D+)').allMatches(a).map((m) => m.group(0)!).toList();
-  final bMatches =
-      RegExp(r'(\d+|\D+)').allMatches(b).map((m) => m.group(0)!).toList();
+  final aMatches = RegExp(
+    r'(\d+|\D+)',
+  ).allMatches(a).map((m) => m.group(0)!).toList();
+  final bMatches = RegExp(
+    r'(\d+|\D+)',
+  ).allMatches(b).map((m) => m.group(0)!).toList();
 
-  final maxLength =
-      aMatches.length > bMatches.length ? aMatches.length : bMatches.length;
+  final maxLength = aMatches.length > bMatches.length
+      ? aMatches.length
+      : bMatches.length;
 
   for (int i = 0; i < maxLength; i++) {
     if (i >= aMatches.length) return -1;
@@ -354,8 +332,9 @@ class Questionnaire {
     final expand = json['expand'] as Map<String, dynamic>? ?? {};
     final questionsData = expand['questions'] as List<dynamic>? ?? [];
 
-    final allQuestions =
-        questionsData.map((q) => Question.fromJson(q)).toList();
+    final allQuestions = questionsData
+        .map((q) => Question.fromJson(q))
+        .toList();
 
     final Set<String> subQuestionIds = {};
     void collectSubQuestionIds(List<Question> questions) {
@@ -372,8 +351,9 @@ class Questionnaire {
 
     collectSubQuestionIds(allQuestions);
 
-    final topLevelQuestions =
-        allQuestions.where((q) => !subQuestionIds.contains(q.id)).toList();
+    final topLevelQuestions = allQuestions
+        .where((q) => !subQuestionIds.contains(q.id))
+        .toList();
 
     topLevelQuestions.sort((a, b) {
       return _alphanumericCompare(a.name, b.name);
@@ -386,5 +366,3 @@ class Questionnaire {
     );
   }
 }
-
-

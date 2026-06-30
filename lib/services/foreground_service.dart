@@ -1,11 +1,6 @@
-import 'dart:developer';
-import 'dart:io';
-
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:screen_time/providers/usage_provider.dart';
 import 'package:screen_time/services/screentime_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:screen_time/utils/platform_utils.dart';
 
 class ForegroundService {
   ForegroundService._();
@@ -22,7 +17,7 @@ class ForegroundService {
       await FlutterForegroundTask.requestNotificationPermission();
     }
 
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       // Android 12+, there are restrictions on starting a foreground service.
       //
       // To restart the service on device reboot or unexpected problem, you need to allow below permission.
@@ -73,14 +68,12 @@ class ForegroundService {
 
     final ServiceRequestResult result =
         await FlutterForegroundTask.startService(
-      serviceTypes: [
-        ForegroundServiceTypes.dataSync,
-      ],
-      serviceId: 500,
-      notificationTitle: 'Screentime Service is running',
-      notificationText: '',
-      callback: startScreentimeService,
-    );
+          serviceTypes: [ForegroundServiceTypes.dataSync],
+          serviceId: 500,
+          notificationTitle: 'Screentime Service is running',
+          notificationText: '',
+          callback: startScreentimeService,
+        );
 
     if (result is ServiceRequestFailure) {
       throw result.error;

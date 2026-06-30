@@ -5,7 +5,7 @@ import 'package:screen_time/providers/user_provider.dart';
 import 'package:screen_time/theme/app_theme.dart';
 import 'package:screen_time/widgets/total_usage_text.dart';
 import 'package:screen_time/utils/network_utils.dart';
-import 'dart:io';
+import 'package:screen_time/utils/platform_utils.dart';
 
 class ScreentimeViewPage extends ConsumerWidget {
   const ScreentimeViewPage({super.key});
@@ -24,7 +24,7 @@ class ScreentimeViewPage extends ConsumerWidget {
       'september',
       'oktober',
       'november',
-      'december'
+      'december',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
@@ -38,7 +38,7 @@ class ScreentimeViewPage extends ConsumerWidget {
       'torsdag',
       'fredag',
       'lördag',
-      'söndag'
+      'söndag',
     ];
     return weekdays[date.weekday - 1];
   }
@@ -130,9 +130,11 @@ class ScreentimeViewPage extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         final isNetworkError = NetworkUtils.isNetworkError(e);
-        final errorMessage = NetworkUtils.getErrorMessage(e,
-            customNetworkMessage:
-                'Internetanslutningen bröts under uppladdningen. Kontrollera din anslutning och försök igen.');
+        final errorMessage = NetworkUtils.getErrorMessage(
+          e,
+          customNetworkMessage:
+              'Internetanslutningen bröts under uppladdningen. Kontrollera din anslutning och försök igen.',
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -173,7 +175,7 @@ class ScreentimeViewPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!Platform.isAndroid) {
+    if (!PlatformUtils.isAndroid) {
       return Scaffold(
         backgroundColor: AppTheme.background,
         appBar: AppBar(
@@ -193,10 +195,7 @@ class ScreentimeViewPage extends ConsumerWidget {
         body: const Center(
           child: Text(
             'Skärmtidsdata är endast tillgänglig på Android',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.primary,
-            ),
+            style: TextStyle(fontSize: 16, color: AppTheme.primary),
             textAlign: TextAlign.center,
           ),
         ),
@@ -256,7 +255,9 @@ class ScreentimeViewPage extends ConsumerWidget {
                       if (isToday) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.primary,
                             borderRadius: BorderRadius.circular(12),
@@ -275,15 +276,15 @@ class ScreentimeViewPage extends ConsumerWidget {
                       Text(
                         _formatDate(usageState.date),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primary,
-                            ),
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                        ),
                       ),
                       Text(
                         _getWeekday(usageState.date),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.primary.withValues(alpha: 0.7),
-                            ),
+                          color: AppTheme.primary.withValues(alpha: 0.7),
+                        ),
                       ),
                     ],
                   ),
@@ -308,7 +309,8 @@ class ScreentimeViewPage extends ConsumerWidget {
                         Card(
                           elevation: 2,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(24.0),
@@ -317,22 +319,23 @@ class ScreentimeViewPage extends ConsumerWidget {
                                 Icon(
                                   Icons.phone_android,
                                   size: 48,
-                                  color:
-                                      AppTheme.primary.withValues(alpha: 0.7),
+                                  color: AppTheme.primary.withValues(
+                                    alpha: 0.7,
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
                                 if (totalSeconds > 0) ...[
                                   TotalUsageText(
-                                      totalMins: totalSeconds / 60.0),
+                                    totalMins: totalSeconds / 60.0,
+                                  ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Total skärmtid',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
+                                    style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
-                                          color: AppTheme.primary
-                                              .withValues(alpha: 0.7),
+                                          color: AppTheme.primary.withValues(
+                                            alpha: 0.7,
+                                          ),
                                         ),
                                   ),
                                 ] else ...[
@@ -349,12 +352,11 @@ class ScreentimeViewPage extends ConsumerWidget {
                                   const SizedBox(height: 8),
                                   Text(
                                     'Ingen skärmtid registrerad',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
+                                    style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
-                                          color: AppTheme.primary
-                                              .withValues(alpha: 0.7),
+                                          color: AppTheme.primary.withValues(
+                                            alpha: 0.7,
+                                          ),
                                         ),
                                   ),
                                 ],
@@ -396,7 +398,11 @@ class ScreentimeViewPage extends ConsumerWidget {
   }
 
   Widget _buildStatCard(
-      BuildContext context, String label, String value, IconData icon) {
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -404,22 +410,25 @@ class ScreentimeViewPage extends ConsumerWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Icon(icon,
-                color: AppTheme.primary.withValues(alpha: 0.7), size: 24),
+            Icon(
+              icon,
+              color: AppTheme.primary.withValues(alpha: 0.7),
+              size: 24,
+            ),
             const SizedBox(height: 8),
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primary,
-                  ),
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.primary.withValues(alpha: 0.7),
-                  ),
+                color: AppTheme.primary.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -430,8 +439,9 @@ class ScreentimeViewPage extends ConsumerWidget {
 
   String _getMostActiveHour(Map<String, int> usageData) {
     if (usageData.isEmpty) return '--';
-    final maxEntry =
-        usageData.entries.reduce((a, b) => a.value > b.value ? a : b);
+    final maxEntry = usageData.entries.reduce(
+      (a, b) => a.value > b.value ? a : b,
+    );
     final hour = int.parse(maxEntry.key);
     final timeString = '${hour.toString().padLeft(2, '0')}:00';
     return '$timeString\n${_formatDuration(maxEntry.value)}';
@@ -439,10 +449,9 @@ class ScreentimeViewPage extends ConsumerWidget {
 
   String _getFirstUsage(Map<String, int> usageData) {
     if (usageData.isEmpty) return '--';
-    final sortedEntries = usageData.entries
-        .where((entry) => entry.value > 0)
-        .toList()
-      ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
+    final sortedEntries =
+        usageData.entries.where((entry) => entry.value > 0).toList()
+          ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
 
     if (sortedEntries.isEmpty) return '--';
 

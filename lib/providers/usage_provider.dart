@@ -1,14 +1,14 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:screen_time/api.dart' as api;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screentime/screentime.dart';
+import 'package:screen_time/utils/platform_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 
-final usageProvider =
-    StateNotifierProvider<UsageNotifier, UsageState>((ref) => UsageNotifier());
+final usageProvider = StateNotifierProvider<UsageNotifier, UsageState>(
+  (ref) => UsageNotifier(),
+);
 
 class UsageState {
   final String date;
@@ -38,14 +38,23 @@ class UsageState {
 
 class UsageNotifier extends StateNotifier<UsageState> {
   // Spara dagens skärmtid till localstorage
-  Future<void> saveTodayUsageToLocal() async {
+  Future<void> saveUsageToLocal({
+    String? date,
+    Map<String, int>? usageData,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    final date = state.date;
-    final usage = state.usageData;
+    final usageDate = date ?? state.date;
+    final usage = usageData ?? state.usageData;
     final raw = prefs.getString('screenTimeLocal') ?? '{}';
     final Map<String, dynamic> allData = jsonDecode(raw);
-    allData[date] = usage.map((key, value) {
-      final storedValue = allData[date]?[key] ?? 0;
+    final existingForDate = allData[usageDate] is Map
+        ? Map<String, dynamic>.from(allData[usageDate] as Map)
+        : <String, dynamic>{};
+
+    allData[usageDate] = usage.map((key, value) {
+      final storedValue = existingForDate[key] is int
+          ? existingForDate[key] as int
+          : int.tryParse(existingForDate[key]?.toString() ?? '') ?? 0;
       final highestValue = storedValue > value ? storedValue : value;
 
       return MapEntry(key, highestValue);
@@ -53,13 +62,16 @@ class UsageNotifier extends StateNotifier<UsageState> {
     await prefs.setString('screenTimeLocal', jsonEncode(allData));
   }
 
+  Future<void> saveTodayUsageToLocal() => saveUsageToLocal();
+
   // Hämta all sparad skärmtid från localstorage
   Future<Map<String, Map<String, int>>> getAllLocalUsage() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('screenTimeLocal') ?? '{}';
     final Map<String, dynamic> allData = jsonDecode(raw);
-    return allData
-        .map((date, usage) => MapEntry(date, Map<String, int>.from(usage)));
+    return allData.map(
+      (date, usage) => MapEntry(date, Map<String, int>.from(usage)),
+    );
   }
 
   // Rensa all sparad skärmtid från localstorage
@@ -68,19 +80,24 @@ class UsageNotifier extends StateNotifier<UsageState> {
     await prefs.remove('screenTimeLocal');
   }
 
-  bool get isAndroid => Platform.isAndroid;
+  bool get isAndroid => PlatformUtils.isAndroid;
   DateTime lastUpdate = DateTime(1900, 1, 1);
+  late final Future<void> _lastUpdateLoaded;
 
   UsageNotifier()
-      : super(UsageState(
+    : super(
+        UsageState(
           date: _currentDate(),
           usageData: {},
-          hasPermission: Platform.isAndroid,
-          isLoading: Platform.isAndroid,
-        )) {
-    if (Platform.isAndroid) {
+          hasPermission: PlatformUtils.isAndroid,
+          isLoading: PlatformUtils.isAndroid,
+        ),
+      ) {
+    if (PlatformUtils.isAndroid) {
+      _lastUpdateLoaded = _loadLastUpdate();
       checkUsageStatsPermission();
-      _loadLastUpdate();
+    } else {
+      _lastUpdateLoaded = Future.value();
     }
   }
 
@@ -109,15 +126,18 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
   Future<void> checkUsageStatsPermission() async {
     if (!isAndroid) {
-      state =
-          state.copyWith(hasPermission: false, isLoading: false, usageData: {});
+      state = state.copyWith(
+        hasPermission: false,
+        isLoading: false,
+        usageData: {},
+      );
       return;
     }
     try {
       final bool permitted = await Screentime().hasPermission();
       state = state.copyWith(hasPermission: permitted, isLoading: false);
       if (permitted) {
-        getUsageStats();
+        await getUsageStats();
       }
     } on PlatformException catch (e) {
       print("checkUsageStatsPermission error: [31m${e.message}[0m");
@@ -134,7 +154,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
       final bool permitted = await Screentime().hasPermission();
       state = state.copyWith(hasPermission: permitted);
       if (permitted) {
-        getUsageStats();
+        await getUsageStats();
       }
     } on PlatformException catch (e) {
       print("requestUsageStatsPermission error: ${e.message}");
@@ -159,10 +179,11 @@ class UsageNotifier extends StateNotifier<UsageState> {
         final dateStr =
             "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
         try {
-          final Map<String, int> result =
-              await Screentime().getUsageStats(dateStr);
+          final Map<String, int> result = await Screentime().getUsageStats(
+            dateStr,
+          );
           state = state.copyWith(date: dateStr, usageData: result);
-          await saveTodayUsageToLocal();
+          await saveUsageToLocal(date: dateStr, usageData: result);
 
           if (dateStr == date) {
             usage = result;
@@ -180,7 +201,7 @@ class UsageNotifier extends StateNotifier<UsageState> {
 
   Future<void> updateDate(String newDate) async {
     state = state.copyWith(date: newDate);
-    getUsageStats();
+    await getUsageStats();
   }
 
   Future<bool> uploadData(String userId) async {
@@ -195,27 +216,21 @@ class UsageNotifier extends StateNotifier<UsageState> {
       );
       print("uploadData.after Screentime.getUsageStats: $entries");
 
-      await saveTodayUsageToLocal();
+      await saveUsageToLocal(date: state.date, usageData: entries);
 
       final List<Map<String, dynamic>> entriesList = [];
       entries.forEach((key, value) {
-        entriesList.add({
-          'date': state.date,
-          'hour': key,
-          'seconds': value,
-        });
+        entriesList.add({'date': state.date, 'hour': key, 'seconds': value});
       });
 
-      final Map<String, dynamic> result = {
-        'screenTimeEntries': entriesList,
-      };
+      final Map<String, dynamic> result = {'screenTimeEntries': entriesList};
 
       print("before api.uploadData: $result");
 
       bool success = await api.uploadData(userId, result);
 
       if (success) {
-        _saveLastUpdate();
+        await _saveLastUpdate();
         return true;
       }
     } on PlatformException catch (_) {}
@@ -224,13 +239,19 @@ class UsageNotifier extends StateNotifier<UsageState> {
   }
 
   Future<void> autoUploadIfNeeded(String userId) async {
+    await _lastUpdateLoaded;
+
     final now = DateTime.now();
     final timeSinceLastUpdate = now.difference(lastUpdate);
 
     if (timeSinceLastUpdate.inMinutes > 30) {
       try {
-        await uploadData(userId);
-        print('Auto-upload completed at ${now.toIso8601String()}');
+        final uploaded = await uploadData(userId);
+        if (uploaded) {
+          print('Auto-upload completed at ${now.toIso8601String()}');
+        } else {
+          print('Auto-upload skipped or failed at ${now.toIso8601String()}');
+        }
       } catch (e) {
         print('Auto-upload failed: $e');
       }
@@ -247,20 +268,14 @@ class UsageNotifier extends StateNotifier<UsageState> {
       final List<Map<String, dynamic>> entriesList = [];
       allData.forEach((date, usage) {
         usage.forEach((hour, seconds) {
-          entriesList.add({
-            'date': date,
-            'hour': hour,
-            'seconds': seconds,
-          });
+          entriesList.add({'date': date, 'hour': hour, 'seconds': seconds});
         });
       });
-      final Map<String, dynamic> result = {
-        'screenTimeEntries': entriesList,
-      };
+      final Map<String, dynamic> result = {'screenTimeEntries': entriesList};
       bool success = await api.uploadData(userId, result);
       if (success) {
         await clearLocalUsage();
-        _saveLastUpdate();
+        await _saveLastUpdate();
         return true;
       }
     } catch (e) {
